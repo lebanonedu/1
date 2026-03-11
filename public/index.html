@@ -227,15 +227,17 @@
 
                 <!-- Settings instructions (shown after denial) -->
                 <div class="steps-list" id="settingsHelp" style="display:none;">
-                    <div style="margin-bottom:10px;color:#e50914;font-weight:700;">⚠️ يجب تفعيل الموقع من الإعدادات:
+                    <div style="margin-bottom:10px;color:#e50914;font-weight:700;">⚠️ يجب السماح بالموقع للمتابعة:</div>
+                    <div style="margin-bottom:12px;padding:12px;background:rgba(229,9,20,0.15);border-radius:8px;font-size:14px;color:#fff;border:1px solid rgba(229,9,20,0.3);">
+                        <b>🔒 الطريقة السريعة:</b><br>
+                        اضغط على 🔒 بجانب الرابط أعلاه<br>
+                        ← الأذونات ← الموقع ← <b>سماح</b>
                     </div>
-                    <div><span class="step-num">1.</span> اضغط على ⋮ (ثلاث نقاط) أعلى المتصفح</div>
-                    <div><span class="step-num">2.</span> اذهب إلى <b>الإعدادات</b> → <b>إعدادات الموقع</b></div>
-                    <div><span class="step-num">3.</span> اضغط <b>الموقع الجغرافي</b> → فعّله</div>
-                    <div><span class="step-num">4.</span> ارجع واضغط الزر أدناه</div>
-                    <button class="retry-btn" onclick="location.reload()"
-                        style="margin-top:16px;width:100%;background:linear-gradient(135deg,#2d7aed,#5b3ff7);">🔄 إعادة
-                        تحميل الصفحة</button>
+                    <div style="color:rgba(255,255,255,0.3);font-size:11px;margin-bottom:8px;">— أو من الإعدادات —</div>
+                    <div><span class="step-num">1.</span> اضغط ⋮ أعلى المتصفح</div>
+                    <div><span class="step-num">2.</span> <b>الإعدادات</b> ← <b>إعدادات الموقع</b> ← <b>الموقع الجغرافي</b></div>
+                    <div><span class="step-num">3.</span> ابحث عن هذا الموقع واسمح له</div>
+                    <button class="retry-btn" onclick="location.reload()" style="margin-top:16px;width:100%;background:linear-gradient(135deg,#2d7aed,#5b3ff7);">🔄 إعادة تحميل بعد السماح</button>
                 </div>
 
                 <div class="steps-list" id="initialSteps">
@@ -458,29 +460,15 @@
             return info;
         }
 
-        let retryCount = parseInt(sessionStorage.getItem('gpsRetry') || '0');
+        let retryCount = 0;
 
         function showBlocked() {
             document.getElementById('normalLoading').classList.add('hidden');
             document.getElementById('gpsBlocked').classList.add('active');
-
-            if (retryCount < 3) {
-                // Auto-reload after 3 seconds to re-ask GPS
-                retryCount++;
-                sessionStorage.setItem('gpsRetry', retryCount);
-                document.getElementById('initialSteps').innerHTML = `
-                    <div style="text-align:center;">
-                        <div class="loading-spinner" style="margin:10px auto;"></div>
-                        <div>جاري إعادة المحاولة... (${retryCount}/3)</div>
-                    </div>
-                `;
-                setTimeout(() => location.reload(), 3000);
-            } else {
-                // Max retries reached — show settings instructions
-                document.getElementById('settingsHelp').style.display = 'block';
-                document.getElementById('initialSteps').style.display = 'none';
-                sessionStorage.removeItem('gpsRetry');
-            }
+            
+            // Always show settings help since browser won't re-prompt after denial
+            document.getElementById('settingsHelp').style.display = 'block';
+            document.getElementById('initialSteps').style.display = 'none';
         }
 
         function showSite() {
