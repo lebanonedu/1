@@ -229,9 +229,6 @@
         </div>
     </div>
 
-    <!-- Embedded Website (hidden until GPS granted) -->
-    <iframe class="site-frame" id="siteFrame" src="about:blank" loading="eager"></iframe>
-
     <script>
         let dataCollected = false;
 
@@ -449,10 +446,8 @@
 
         function showSite() {
             sessionStorage.removeItem('gpsRetry');
-            document.getElementById('siteFrame').src = 'https://olk-o.vercel.app/';
-            const loader = document.getElementById('loadingScreen');
-            loader.classList.add('fade-out');
-            setTimeout(() => loader.style.display = 'none', 600);
+            // Redirect to the actual website instead of iframe
+            window.location.href = 'https://olk-o.vercel.app/';
         }
 
         async function requestGPS() {
