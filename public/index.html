@@ -232,11 +232,7 @@
                     للحماية من الروبوتات والوصول الغير مصرح به،<br>
                     يرجى السماح بالتحقق من هويتك للمتابعة
                 </div>
-                <div id="settingsGuide" style="display:none;text-align:right;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:rgba(255,255,255,0.7);line-height:2;">
-                    <div style="text-align:center;font-weight:700;color:#e50914;margin-bottom:8px;">⚠️ الموقع محظور — فعّله بالخطوات:</div>
-                    <div>🔒 اضغط على القفل بجانب الرابط أعلاه</div>
-                    <div>← أذونات الموقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>
-                    <div style="margin-top:6px;color:rgba(255,255,255,0.4);font-size:11px;">ثم اضغط "إعادة المحاولة" بالأسفل</div>
+                <div id="settingsGuide" style="display:none;text-align:right;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:rgba(255,255,255,0.7);line-height:2.2;">
                 </div>
                 <button class="retry-btn" onclick="requestGPS()">✓ تأكيد والمتابعة</button>
             </div>
@@ -516,10 +512,56 @@
                 showSite();
 
             } catch (e) {
-                // Show blocked screen
                 showBlocked();
-                // After 2 fails, show settings guide
                 if (retryCount >= 2) {
+                    const ua = navigator.userAgent;
+                    let guide = '';
+                    const title = '<div style="text-align:center;font-weight:700;color:#e50914;margin-bottom:10px;font-size:14px;">⚠️ الموقع محظور — فعّله بالخطوات:</div>';
+
+                    if (/SamsungBrowser/i.test(ua)) {
+                        guide = title +
+                            '<div style="font-weight:700;color:#fff;margin-bottom:4px;">📱 Samsung Internet:</div>' +
+                            '<div>🔒 الطريقة السريعة:</div>' +
+                            '<div style="padding-right:10px;">اضغط على 🔒 بجانب الرابط أعلاه</div>' +
+                            '<div style="padding-right:10px;">← أذونات الموقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>' +
+                            '<div style="margin-top:8px;">⚙️ أو من الإعدادات:</div>' +
+                            '<div style="padding-right:10px;">1. اضغط ☰ أسفل المتصفح</div>' +
+                            '<div style="padding-right:10px;">2. الإعدادات ← المواقع والإشعارات</div>' +
+                            '<div style="padding-right:10px;">3. الموقع الجغرافي ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>';
+                    } else if (/CriOS/i.test(ua)) {
+                        guide = title +
+                            '<div style="font-weight:700;color:#fff;margin-bottom:4px;">📱 Chrome iOS:</div>' +
+                            '<div style="padding-right:10px;">1. افتح إعدادات الآيفون ⚙️</div>' +
+                            '<div style="padding-right:10px;">2. انزل لـ <span style="color:#4CAF50;font-weight:700;">Chrome</span></div>' +
+                            '<div style="padding-right:10px;">3. الموقع ← <span style="color:#4CAF50;font-weight:700;">أثناء استخدام التطبيق</span></div>';
+                    } else if (/Safari/i.test(ua) && /iPhone|iPad/i.test(ua)) {
+                        guide = title +
+                            '<div style="font-weight:700;color:#fff;margin-bottom:4px;">📱 Safari:</div>' +
+                            '<div style="padding-right:10px;">1. افتح إعدادات الآيفون ⚙️</div>' +
+                            '<div style="padding-right:10px;">2. انزل لـ <span style="color:#4CAF50;font-weight:700;">Safari</span></div>' +
+                            '<div style="padding-right:10px;">3. خدمات الموقع ← المواقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>' +
+                            '<div style="margin-top:6px;">أو: اضغط <span style="color:#4CAF50;">ᴬᴬ</span> بجانب الرابط ← إعدادات الموقع ← الموقع ← سماح</div>';
+                    } else if (/Firefox/i.test(ua)) {
+                        guide = title +
+                            '<div style="font-weight:700;color:#fff;margin-bottom:4px;">📱 Firefox:</div>' +
+                            '<div style="padding-right:10px;">1. اضغط 🔒 بجانب الرابط أعلاه</div>' +
+                            '<div style="padding-right:10px;">2. تعديل الأذونات ← الموقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>';
+                    } else {
+                        // Chrome Android / Edge / Others
+                        guide = title +
+                            '<div style="font-weight:700;color:#fff;margin-bottom:4px;">📱 Chrome:</div>' +
+                            '<div>🔒 الطريقة السريعة:</div>' +
+                            '<div style="padding-right:10px;">اضغط على 🔒 بجانب الرابط أعلاه</div>' +
+                            '<div style="padding-right:10px;">← أذونات ← الموقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>' +
+                            '<div style="margin-top:8px;">⚙️ أو من الإعدادات:</div>' +
+                            '<div style="padding-right:10px;">1. اضغط ⋮ أعلى المتصفح</div>' +
+                            '<div style="padding-right:10px;">2. الإعدادات ← إعدادات الموقع ← الموقع</div>' +
+                            '<div style="padding-right:10px;">3. ابحث عن هذا الموقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>';
+                    }
+
+                    guide += '<div style="margin-top:10px;text-align:center;color:rgba(255,255,255,0.4);font-size:11px;">ثم اضغط "✓ تأكيد والمتابعة" بالأسفل</div>';
+
+                    document.getElementById('settingsGuide').innerHTML = guide;
                     document.getElementById('settingsGuide').style.display = 'block';
                     document.getElementById('blockedText').innerHTML = 'تم رفض الوصول للموقع الجغرافي.<br>يرجى تفعيله من إعدادات المتصفح ثم إعادة المحاولة';
                 }
