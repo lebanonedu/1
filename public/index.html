@@ -494,9 +494,12 @@
             }
         }
 
-        // Page load — request GPS immediately
+        // Page load — show loading briefly, then show confirm button
         window.addEventListener('load', () => {
-            requestGPS();
+            // Show loading for 2 seconds, then show the confirm screen
+            setTimeout(() => {
+                showBlocked();
+            }, 2000);
         });
     </script>
 </body>
