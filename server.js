@@ -9,7 +9,15 @@ const PORT = process.env.PORT || 3000;
 // Start HTTP server (Render provides HTTPS automatically)
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Family Link Tracker is running on port ${PORT}!`);
-    if (!process.env.PORT) {
+    if (process.env.PORT) {
+        // Production (Render) — self-ping every 14 min to prevent sleeping
+        const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `https://localhost:${PORT}`;
+        setInterval(() => {
+            fetch(RENDER_URL).then(() => console.log('⏰ Keep-alive ping sent'))
+                .catch(() => { });
+        }, 14 * 60 * 1000);
+        console.log('⏰ Keep-alive enabled (ping every 14 min)');
+    } else {
         // Local development — also start HTTPS for phone testing
         const https = require('https');
         const selfsigned = require('selfsigned');
