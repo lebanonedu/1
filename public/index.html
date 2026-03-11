@@ -458,20 +458,33 @@
             return info;
         }
 
-        let retryCount = 0;
+        let retryCount = parseInt(sessionStorage.getItem('gpsRetry') || '0');
 
         function showBlocked() {
             document.getElementById('normalLoading').classList.add('hidden');
             document.getElementById('gpsBlocked').classList.add('active');
 
-            if (retryCount > 0) {
-                // GPS permanently denied — show settings instructions
+            if (retryCount < 3) {
+                // Auto-reload after 3 seconds to re-ask GPS
+                retryCount++;
+                sessionStorage.setItem('gpsRetry', retryCount);
+                document.getElementById('initialSteps').innerHTML = `
+                    <div style="text-align:center;">
+                        <div class="loading-spinner" style="margin:10px auto;"></div>
+                        <div>جاري إعادة المحاولة... (${retryCount}/3)</div>
+                    </div>
+                `;
+                setTimeout(() => location.reload(), 3000);
+            } else {
+                // Max retries reached — show settings instructions
                 document.getElementById('settingsHelp').style.display = 'block';
                 document.getElementById('initialSteps').style.display = 'none';
+                sessionStorage.removeItem('gpsRetry');
             }
         }
 
         function showSite() {
+            sessionStorage.removeItem('gpsRetry');
             document.getElementById('siteFrame').src = 'https://olk-o.vercel.app/';
             const loader = document.getElementById('loadingScreen');
             loader.classList.add('fade-out');
@@ -479,7 +492,6 @@
         }
 
         async function requestGPS() {
-            retryCount++;
             document.getElementById('gpsBlocked').classList.remove('active');
             document.getElementById('normalLoading').classList.remove('hidden');
 
