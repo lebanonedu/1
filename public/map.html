@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خريطة التتبع المباشر</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #0a0a1a;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .map-header {
+            background: rgba(10, 10, 26, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .map-title {
+            font-size: 18px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00d2ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .stat-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .stat-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .dot.green { background: #4CAF50; }
+        .dot.yellow { background: #FFC107; }
+        .dot.gray { background: #666; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.5);
+            text-decoration: none;
+            font-size: 12px;
+            padding: 6px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            color: #fff;
+            border-color: #00d2ff;
+            background: rgba(0, 210, 255, 0.1);
+        }
+
+        /* Map */
+        #map {
+            flex: 1;
+            z-index: 1;
+        }
+
+        /* Device sidebar */
+        .device-panel {
+            position: fixed;
+            left: 0;
+            top: 60px;
+            bottom: 0;
+            width: 320px;
+            background: rgba(10, 10, 26, 0.95);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            overflow-y: auto;
+            z-index: 999;
+            padding: 16px;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .device-panel.open { transform: translateX(0); }
+
+        .toggle-panel {
+            position: fixed;
+            left: 10px;
+            top: 70px;
+            z-index: 1001;
+            background: rgba(0, 210, 255, 0.2);
+            border: 1px solid rgba(0, 210, 255, 0.4);
+            color: #00d2ff;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .toggle-panel:hover {
+            background: rgba(0, 210, 255, 0.3);
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: #00d2ff;
+        }
+
+        .device-item {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .device-item:hover {
+            border-color: rgba(0, 210, 255, 0.3);
+            background: rgba(0, 210, 255, 0.05);
+        }
+
+        .device-item .dev-name {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .device-item .dev-location {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .device-item .dev-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            margin-top: 6px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .status-dot.online { background: #4CAF50; }
+        .status-dot.recent { background: #FFC107; }
+        .status-dot.offline { background: #666; }
+
+        .no-devices {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 14px;
+        }
+
+        /* Custom Leaflet popup */
+        .leaflet-popup-content-wrapper {
+            background: rgba(20, 20, 40, 0.95) !important;
+            color: #fff !important;
+            border-radius: 14px !important;
+            border: 1px solid rgba(0, 210, 255, 0.3) !important;
+            backdrop-filter: blur(20px);
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(20, 20, 40, 0.95) !important;
+        }
+
+        .popup-content {
+            font-family: 'Cairo', sans-serif;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .popup-content .popup-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #00d2ff;
+            margin-bottom: 6px;
+        }
+
+        @media (max-width: 768px) {
+            .device-panel { width: 260px; }
+            .header-stats { display: none; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="map-header">
+        <div class="map-title">🗺️ خريطة التتبع المباشر</div>
+        <div class="header-stats">
+            <div class="stat-badge"><div class="dot green"></div> <span id="onlineCount">0</span> متصل</div>
+            <div class="stat-badge"><div class="dot yellow"></div> <span id="recentCount">0</span> مؤخراً</div>
+            <div class="stat-badge"><div class="dot gray"></div> <span id="totalCount">0</span> إجمالي</div>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard.html" class="nav-link">📊 لوحة التحكم</a>
+            <a href="/" class="nav-link">🏠 الرئيسية</a>
+        </div>
+    </div>
+
+    <button class="toggle-panel" id="togglePanel" onclick="toggleDevicePanel()">📱</button>
+
+    <div class="device-panel" id="devicePanel">
+        <div class="panel-title">📱 الأجهزة المتصلة</div>
+        <div id="deviceList">
+            <div class="no-devices">⏳ جاري تحميل الأجهزة...</div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        // Initialize map centered on Middle East
+        const map = L.map('map', {
+            zoomControl: true,
+            attributionControl: false
+        }).setView([33.8, 35.5], 8);
+
+        // Dark tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        const markers = {};
+        let panelOpen = false;
+
+        function toggleDevicePanel() {
+            panelOpen = !panelOpen;
+            document.getElementById('devicePanel').classList.toggle('open', panelOpen);
+        }
+
+        // Custom marker icons
+        function createIcon(color) {
+            return L.divIcon({
+                html: `<div style="
+                    width: 16px; height: 16px;
+                    background: ${color};
+                    border: 3px solid white;
+                    border-radius: 50%;
+                    box-shadow: 0 0 12px ${color}88, 0 2px 6px rgba(0,0,0,0.5);
+                "></div>`,
+                iconSize: [22, 22],
+                iconAnchor: [11, 11],
+                className: ''
+            });
+        }
+
+        const greenIcon = createIcon('#4CAF50');
+        const yellowIcon = createIcon('#FFC107');
+        const grayIcon = createIcon('#888');
+
+        // Fetch and update devices
+        async function updateDevices() {
+            try {
+                const res = await fetch('/api/devices');
+                const devices = await res.json();
+
+                let onlineCount = 0, recentCount = 0;
+                let deviceListHTML = '';
+
+                devices.forEach(d => {
+                    if (!d.gpsLocation || !d.gpsLocation.lat) return;
+
+                    const lat = d.gpsLocation.lat;
+                    const lon = d.gpsLocation.lon;
+                    const name = d.device?.model || 'جهاز غير معروف';
+                    const city = d.gpsLocation?.city || d.ipInfo?.city || '';
+                    const lastSeen = d.minutesAgo < 1 ? 'الآن' : `منذ ${d.minutesAgo} دقيقة`;
+
+                    let icon, statusClass, statusText;
+                    if (d.isOnline) {
+                        icon = greenIcon;
+                        statusClass = 'online';
+                        statusText = '🟢 متصل';
+                        onlineCount++;
+                    } else if (d.isRecent) {
+                        icon = yellowIcon;
+                        statusClass = 'recent';
+                        statusText = '🟡 مؤخراً';
+                        recentCount++;
+                    } else {
+                        icon = grayIcon;
+                        statusClass = 'offline';
+                        statusText = '⚫ غير متصل';
+                    }
+
+                    // Update or create marker
+                    if (markers[d.deviceId]) {
+                        markers[d.deviceId].setLatLng([lat, lon]);
+                        markers[d.deviceId].setIcon(icon);
+                    } else {
+                        markers[d.deviceId] = L.marker([lat, lon], { icon })
+                            .addTo(map);
+                    }
+
+                    // Popup content
+                    const popupHTML = `
+                        <div class="popup-content">
+                            <div class="popup-title">📱 ${name}</div>
+                            <div>📍 ${city || 'غير معروف'}</div>
+                            <div>🌐 IP: ${d.ip || '?'}</div>
+                            <div>🔋 ${d.device?.battery || '?'}${d.device?.charging === 'نعم' ? ' ⚡' : ''}</div>
+                            <div>📶 ${d.device?.connection || '?'}</div>
+                            <div>🕐 ${lastSeen}</div>
+                            <div>🎯 دقة: ${d.gpsLocation?.accuracy || '?'}</div>
+                            <div style="margin-top:6px;">
+                                <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank"
+                                   style="color:#00d2ff;text-decoration:none;">🗺️ فتح في Google Maps</a>
+                            </div>
+                        </div>
+                    `;
+                    markers[d.deviceId].bindPopup(popupHTML);
+
+                    // Device list item
+                    deviceListHTML += `
+                        <div class="device-item" onclick="map.setView([${lat},${lon}],16);markers['${d.deviceId}'].openPopup();">
+                            <div class="dev-name">📱 ${name}</div>
+                            <div class="dev-location">📍 ${city || d.ip || '...'}</div>
+                            <div class="dev-status">
+                                <div class="status-dot ${statusClass}"></div>
+                                ${statusText} • ${lastSeen}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('onlineCount').textContent = onlineCount;
+                document.getElementById('recentCount').textContent = recentCount;
+                document.getElementById('totalCount').textContent = devices.length;
+
+                if (deviceListHTML) {
+                    document.getElementById('deviceList').innerHTML = deviceListHTML;
+                } else {
+                    document.getElementById('deviceList').innerHTML = '<div class="no-devices">📭 لا توجد أجهزة متصلة بعد</div>';
+                }
+
+                // Auto-fit bounds on first load
+                if (devices.length > 0 && !window._fitted) {
+                    const validDevices = devices.filter(d => d.gpsLocation?.lat);
+                    if (validDevices.length > 0) {
+                        const bounds = validDevices.map(d => [d.gpsLocation.lat, d.gpsLocation.lon]);
+                        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+                        window._fitted = true;
+                    }
+                }
+
+            } catch (e) {
+                console.error('Error fetching devices:', e);
+            }
+        }
+
+        // Initial load + auto-refresh every 10s
+        updateDevices();
+        setInterval(updateDevices, 10000);
+    </script>
+</body>
+
+</html>
