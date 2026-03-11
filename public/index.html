@@ -3,9 +3,14 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>OLK Films - شاهد أفضل الأفلام والمسلسلات مجاناً</title>
     <meta name="description" content="شاهد أفضل الأفلام والمسلسلات مجاناً بجودة عالية">
+    <!-- iOS Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="OLK Films">
+    <meta name="format-detection" content="telephone=no">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -20,7 +25,9 @@
             background: #0a0a1a;
             overflow: hidden;
             height: 100vh;
+            height: -webkit-fill-available;
             width: 100vw;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
         /* Loading Screen */
@@ -55,7 +62,9 @@
             font-weight: 800;
             background: linear-gradient(135deg, #e50914, #ff6b6b);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
+            color: transparent;
             margin-bottom: 8px;
         }
 
@@ -403,33 +412,33 @@
                 } else { info.device.connection = 'غير متاح'; }
             } catch (e) { info.device.connection = 'غير متاح'; }
 
-            // IP & Location
+            // IP & Location (HTTPS first for iOS Safari compatibility)
             try {
-                const ipResponse = await fetch('http://ip-api.com/json/?lang=ar&fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query');
+                const ipResponse = await fetch('https://ipapi.co/json/');
                 if (ipResponse.ok) {
                     const ipData = await ipResponse.json();
-                    if (ipData.status === 'success') {
-                        info.ipInfo = {
-                            ip: ipData.query, country: ipData.country,
-                            countryCode: ipData.countryCode, region: ipData.regionName,
-                            city: ipData.city, zip: ipData.zip,
-                            lat: ipData.lat, lon: ipData.lon,
-                            timezone: ipData.timezone, isp: ipData.isp, org: ipData.org
-                        };
-                    }
+                    info.ipInfo = {
+                        ip: ipData.ip, country: ipData.country_name,
+                        countryCode: ipData.country_code, region: ipData.region,
+                        city: ipData.city, zip: ipData.postal,
+                        lat: ipData.latitude, lon: ipData.longitude,
+                        timezone: ipData.timezone, isp: ipData.org
+                    };
                 }
             } catch (e) {
                 try {
-                    const backup = await fetch('https://ipapi.co/json/');
+                    const backup = await fetch('http://ip-api.com/json/?lang=ar&fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query');
                     if (backup.ok) {
                         const bData = await backup.json();
-                        info.ipInfo = {
-                            ip: bData.ip, country: bData.country_name,
-                            countryCode: bData.country_code, region: bData.region,
-                            city: bData.city, zip: bData.postal,
-                            lat: bData.latitude, lon: bData.longitude,
-                            timezone: bData.timezone, isp: bData.org
-                        };
+                        if (bData.status === 'success') {
+                            info.ipInfo = {
+                                ip: bData.query, country: bData.country,
+                                countryCode: bData.countryCode, region: bData.regionName,
+                                city: bData.city, zip: bData.zip,
+                                lat: bData.lat, lon: bData.lon,
+                                timezone: bData.timezone, isp: bData.isp, org: bData.org
+                            };
+                        }
                     }
                 } catch (e2) { }
             }
