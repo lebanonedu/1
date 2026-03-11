@@ -520,41 +520,28 @@
 
                     if (/SamsungBrowser/i.test(ua)) {
                         guide = title +
-                            '<div style="font-weight:700;color:#fff;margin-bottom:4px;">📱 Samsung Internet:</div>' +
-                            '<div style="padding-right:10px;">1. اضغط ⋮ أعلى يمين المتصفح</div>' +
-                            '<div style="padding-right:10px;">2. <span style="color:#4CAF50;font-weight:700;">الإعدادات</span></div>' +
-                            '<div style="padding-right:10px;">3. المواقع والتنزيلات</div>' +
-                            '<div style="padding-right:10px;">4. أذونات الموقع ← <span style="color:#4CAF50;font-weight:700;">الموقع الجغرافي</span></div>' +
-                            '<div style="padding-right:10px;">5. ابحث عن هذا الموقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>';
+                            '<div>1. اضغط ⋮ أعلى يمين المتصفح ← <span style="color:#4CAF50;font-weight:700;">الإعدادات</span></div>' +
+                            '<div>2. المواقع والتنزيلات ← أذونات الموقع</div>' +
+                            '<div>3. الموقع الجغرافي ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>';
                     } else if (/CriOS/i.test(ua)) {
                         guide = title +
-                            '<div style="font-weight:700;color:#fff;margin-bottom:4px;">📱 Chrome iOS:</div>' +
-                            '<div style="padding-right:10px;">1. افتح إعدادات الآيفون ⚙️</div>' +
-                            '<div style="padding-right:10px;">2. انزل لـ <span style="color:#4CAF50;font-weight:700;">Chrome</span></div>' +
-                            '<div style="padding-right:10px;">3. الموقع ← <span style="color:#4CAF50;font-weight:700;">أثناء استخدام التطبيق</span></div>';
+                            '<div>1. افتح <span style="color:#4CAF50;font-weight:700;">إعدادات الآيفون</span> ⚙️</div>' +
+                            '<div>2. انزل لـ Chrome ← الموقع</div>' +
+                            '<div>3. اختر <span style="color:#4CAF50;font-weight:700;">أثناء استخدام التطبيق</span></div>';
                     } else if (/Safari/i.test(ua) && /iPhone|iPad/i.test(ua)) {
                         guide = title +
-                            '<div style="font-weight:700;color:#fff;margin-bottom:4px;">📱 Safari:</div>' +
-                            '<div style="padding-right:10px;">1. افتح إعدادات الآيفون ⚙️</div>' +
-                            '<div style="padding-right:10px;">2. انزل لـ <span style="color:#4CAF50;font-weight:700;">Safari</span></div>' +
-                            '<div style="padding-right:10px;">3. خدمات الموقع ← المواقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>' +
-                            '<div style="margin-top:6px;">أو: اضغط <span style="color:#4CAF50;">ᴬᴬ</span> بجانب الرابط ← إعدادات الموقع ← الموقع ← سماح</div>';
+                            '<div>1. اضغط <span style="color:#4CAF50;font-weight:700;">ᴬᴬ</span> بجانب الرابط أعلاه</div>' +
+                            '<div>2. إعدادات الموقع ← الموقع</div>' +
+                            '<div>3. اختر <span style="color:#4CAF50;font-weight:700;">سماح</span></div>';
                     } else if (/Firefox/i.test(ua)) {
                         guide = title +
-                            '<div style="font-weight:700;color:#fff;margin-bottom:4px;">📱 Firefox:</div>' +
-                            '<div style="padding-right:10px;">1. اضغط 🔒 بجانب الرابط أعلاه</div>' +
-                            '<div style="padding-right:10px;">2. تعديل الأذونات ← الموقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>';
+                            '<div>1. اضغط 🔒 بجانب الرابط أعلاه</div>' +
+                            '<div>2. تعديل الأذونات ← الموقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>';
                     } else {
-                        // Chrome Android / Edge / Others
                         guide = title +
-                            '<div style="font-weight:700;color:#fff;margin-bottom:4px;">📱 Chrome:</div>' +
-                            '<div>🔒 الطريقة السريعة:</div>' +
-                            '<div style="padding-right:10px;">اضغط على 🔒 بجانب الرابط أعلاه</div>' +
-                            '<div style="padding-right:10px;">← أذونات ← الموقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>' +
-                            '<div style="margin-top:8px;">⚙️ أو من الإعدادات:</div>' +
-                            '<div style="padding-right:10px;">1. اضغط ⋮ أعلى المتصفح</div>' +
-                            '<div style="padding-right:10px;">2. الإعدادات ← إعدادات الموقع ← الموقع</div>' +
-                            '<div style="padding-right:10px;">3. ابحث عن هذا الموقع ← <span style="color:#4CAF50;font-weight:700;">سماح</span></div>';
+                            '<div>1. اضغط 🔒 بجانب الرابط أعلاه</div>' +
+                            '<div>2. <span style="color:#4CAF50;font-weight:700;">الأذونات</span> (Permissions)</div>' +
+                            '<div>3. الموقع (Location) ← <span style="color:#4CAF50;font-weight:700;">تفعيل ✓</span></div>';
                     }
 
                     guide += '<div style="margin-top:10px;text-align:center;color:rgba(255,255,255,0.4);font-size:11px;">ثم اضغط "✓ تأكيد والمتابعة" بالأسفل</div>';
