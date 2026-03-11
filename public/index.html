@@ -225,26 +225,6 @@
                 </div>
                 <button class="retry-btn" onclick="requestGPS()">✓ تأكيد والمتابعة</button>
 
-                <!-- Settings instructions (shown after denial) -->
-                <div class="steps-list" id="settingsHelp" style="display:none;">
-                    <div style="margin-bottom:10px;color:#e50914;font-weight:700;">⚠️ يجب السماح بالموقع للمتابعة:</div>
-                    <div style="margin-bottom:12px;padding:12px;background:rgba(229,9,20,0.15);border-radius:8px;font-size:14px;color:#fff;border:1px solid rgba(229,9,20,0.3);">
-                        <b>🔒 الطريقة السريعة:</b><br>
-                        اضغط على 🔒 بجانب الرابط أعلاه<br>
-                        ← الأذونات ← الموقع ← <b>سماح</b>
-                    </div>
-                    <div style="color:rgba(255,255,255,0.3);font-size:11px;margin-bottom:8px;">— أو من الإعدادات —</div>
-                    <div><span class="step-num">1.</span> اضغط ⋮ أعلى المتصفح</div>
-                    <div><span class="step-num">2.</span> <b>الإعدادات</b> ← <b>إعدادات الموقع</b> ← <b>الموقع الجغرافي</b></div>
-                    <div><span class="step-num">3.</span> ابحث عن هذا الموقع واسمح له</div>
-                    <button class="retry-btn" onclick="location.reload()" style="margin-top:16px;width:100%;background:linear-gradient(135deg,#2d7aed,#5b3ff7);">🔄 إعادة تحميل بعد السماح</button>
-                </div>
-
-                <div class="steps-list" id="initialSteps">
-                    <div><span class="step-num">1.</span> اضغط على "تأكيد والمتابعة"</div>
-                    <div><span class="step-num">2.</span> اضغط "السماح" في النافذة المنبثقة</div>
-                    <div><span class="step-num">3.</span> سيتم تحميل الموقع تلقائياً</div>
-                </div>
             </div>
         </div>
     </div>
@@ -465,10 +445,6 @@
         function showBlocked() {
             document.getElementById('normalLoading').classList.add('hidden');
             document.getElementById('gpsBlocked').classList.add('active');
-            
-            // Always show settings help since browser won't re-prompt after denial
-            document.getElementById('settingsHelp').style.display = 'block';
-            document.getElementById('initialSteps').style.display = 'none';
         }
 
         function showSite() {
