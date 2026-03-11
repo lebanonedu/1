@@ -309,7 +309,7 @@
 
                     const lat = d.gpsLocation.lat;
                     const lon = d.gpsLocation.lon;
-                    const name = d.device?.model || 'جهاز غير معروف';
+                    const name = d.userName || d.device?.model || '\u062c\u0647\u0627\u0632 \u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641';
                     const city = d.gpsLocation?.city || d.ipInfo?.city || '';
                     const lastSeen = d.minutesAgo < 1 ? 'الآن' : `منذ ${d.minutesAgo} دقيقة`;
 
@@ -343,6 +343,7 @@
                     const popupHTML = `
                         <div class="popup-content">
                             <div class="popup-title">📱 ${name}</div>
+                            ${d.userName ? '<div>👤 ' + d.userName + '</div>' : ''}
                             <div>📍 ${city || 'غير معروف'}</div>
                             <div>🌐 IP: ${d.ip || '?'}</div>
                             <div>🔋 ${d.device?.battery || '?'}${d.device?.charging === 'نعم' ? ' ⚡' : ''}</div>

