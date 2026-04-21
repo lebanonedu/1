@@ -17,6 +17,7 @@
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://www.google-analytics.com"
 
 # Cache static assets for 1 year
 [[headers]]
@@ -54,10 +55,22 @@
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
 
+# Sitemap – revalidate often for SEO freshness
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Content-Type = "application/xml; charset=utf-8"
+    Cache-Control = "public, max-age=3600, must-revalidate"
+
+# Robots.txt – revalidate often
+[[headers]]
+  for = "/robots.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+    Cache-Control = "public, max-age=3600, must-revalidate"
+
 # SPA Redirect – serve index.html for all routes
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-

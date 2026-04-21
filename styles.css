@@ -1724,11 +1724,51 @@ button { border: none; background: none; cursor: pointer; font: inherit; color: 
 
 .footer-bottom {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
 .footer-bottom p {
   color: var(--text-tertiary);
   font-size: 0.82rem;
+}
+
+.footer-seo-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+}
+
+.footer-seo-links a {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  opacity: 0.7;
+  position: relative;
+}
+
+.footer-seo-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--accent-primary);
+  transition: width 0.3s ease;
+}
+
+.footer-seo-links a:hover {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+
+.footer-seo-links a:hover::after {
+  width: 100%;
 }
 
 /* ══════════════════════════════════════════════
