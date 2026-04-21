@@ -60,7 +60,4 @@
   to = "/index.html"
   status = 200
 
-# Clear Netlify cache plugin
-[[plugins]]
-  package = "@netlify/plugin-cache-clear"
 
