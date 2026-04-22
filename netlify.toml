@@ -69,6 +69,13 @@
     Content-Type = "text/plain; charset=utf-8"
     Cache-Control = "public, max-age=3600, must-revalidate"
 
+# Force redirect from Netlify subdomain to custom domain
+[[redirects]]
+  from = "https://amymusic0.netlify.app/*"
+  to = "https://amyymusic.com/:splat"
+  status = 301
+  force = true
+
 # SPA Redirect – serve index.html for all routes
 [[redirects]]
   from = "/*"
