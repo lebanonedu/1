@@ -61,5 +61,10 @@
       <image:title>Amy Backstage mit Gitarre</image:title>
       <image:caption>Amy Backstage mit Gitarre und Rockpostern</image:caption>
     </image:image>
+    <image:image>
+      <image:loc>https://amyymusic.com/images/amyy.jpg</image:loc>
+      <image:title>Amy singt auf der Bühne mit Mikrofon</image:title>
+      <image:caption>Amy Eventsängerin bei einem Bühnenauftritt mit blauer Beleuchtung</image:caption>
+    </image:image>
   </url>
 </urlset>
